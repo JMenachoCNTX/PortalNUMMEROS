@@ -85,6 +85,7 @@ async function leerTodo() {
 /* ── 3. Imágenes de Drive → carpeta anuncios/ del sitio ── */
 const usadas = new Set();
 const pendientesDescarga = new Map();
+const renombradas = new Map();
 function rutaImagen(valor) {
   const t = texto(valor);
   if (!t) return '';
@@ -107,7 +108,7 @@ async function descargarImagenes() {
       const buf = Buffer.from(await res.arrayBuffer());
       const final = id + '.' + ext;
       fs.writeFileSync(path.join(CARPETA_IMG, final), buf);
-      if (final !== archivo) { usadas.delete(archivo); usadas.add(final); }
+      if (final !== archivo) { usadas.delete(archivo); usadas.add(final); renombradas.set('anuncios/' + archivo, 'anuncios/' + final); }
       log('  Imagen descargada: ' + final + ' (' + Math.round(buf.length / 1024) + ' KB)');
     } catch (e) { log('  No se pudo descargar la imagen ' + id + ': ' + e.message); }
   }
@@ -184,6 +185,11 @@ async function principal() {
   }
 
   await descargarImagenes();
+  if (renombradas.size) {
+    const corregir = o => { let t = JSON.stringify(o); for (const [a, b] of renombradas) t = t.split(a).join(b); return JSON.parse(t); };
+    Object.assign(publico, corregir(publico));
+    for (const r of repartidores.values()) if (r.avisos.length) r.avisos = corregir(r.avisos);
+  }
   await sincronizarCuentas(repartidores, estado);
 
   // Datos de cada repartidor: solo se escriben los que cambiaron
