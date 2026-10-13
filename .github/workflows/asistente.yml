@@ -26,19 +26,22 @@ jobs:
           [ -z "$D" ] && falta="$falta DEEPSEEK_API_KEY"
           if [ -n "$falta" ]; then echo "::warning::Todavía faltan estos secretos en GitHub:$falta. El asistente se publicará cuando estén."; echo "listo=no" >> "$GITHUB_OUTPUT"; else echo "listo=si" >> "$GITHUB_OUTPUT"; fi
 
-      - name: Publicar en Cloudflare
-        id: cf
+      - uses: actions/setup-node@v4
         if: steps.sec.outputs.listo == 'si'
-        uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: asistente
-          secrets: |
-            DEEPSEEK_API_KEY
-        env:
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          node-version: 22
 
-      - name: Dirección del asistente
+      - name: Publicar en Cloudflare
         if: steps.sec.outputs.listo == 'si'
-        run: echo "::notice::Asistente publicado en ${{ steps.cf.outputs.deployment-url }}"
+        working-directory: asistente
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          avisar() { echo "::error::$1: $(tr '\n' ' ' < salida.txt | sed 's/\x1b\[[0-9;]*m//g' | tail -c 900)"; }
+          npx --yes wrangler@3 deploy > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo publicar"; exit 1; }
+          cat salida.txt
+          URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' salida.txt | head -1)
+          printf '%s' "$DEEPSEEK_API_KEY" | npx --yes wrangler@3 secret put DEEPSEEK_API_KEY > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo guardar la clave de DeepSeek"; exit 1; }
+          echo "::notice::Asistente publicado en $URL"
