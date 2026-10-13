@@ -10,10 +10,12 @@ window.PORTAL = {
      diseñó para ir en la página. Mientras digan 'PEGAR', el portal funciona
      en MODO DEMOSTRACIÓN con datos de ejemplo. */
   firebase: {
-    apiKey: 'PEGAR',
-    authDomain: 'PEGAR.firebaseapp.com',
-    projectId: 'PEGAR',
-    appId: 'PEGAR'
+    apiKey: 'AIzaSyBh_NxhM5h6x--ZwxwoUCYf0yhW7Mt9k_A',
+    authDomain: 'portal-nummeros.firebaseapp.com',
+    projectId: 'portal-nummeros',
+    storageBucket: 'portal-nummeros.firebasestorage.app',
+    messagingSenderId: '924886635369',
+    appId: '1:924886635369:web:48f940d324d4dfb518e3f8'
   },
 
   /* Cómo se arma el usuario de cada repartidor en Firebase.
