@@ -43,10 +43,16 @@ jobs:
           T=$(printf '%s' "$TOKEN_CRUDO" | grep -oE 'Bearer[[:space:]]+[A-Za-z0-9_-]{30,}' | head -1 | awk '{print $2}')
           [ -z "$T" ] && T=$(printf '%s' "$TOKEN_CRUDO" | grep -oE '[A-Za-z0-9_-]{35,}' | head -1)
           export CLOUDFLARE_API_TOKEN="$T"
-          export CLOUDFLARE_ACCOUNT_ID=$(printf '%s' "$CUENTA_CRUDA" | grep -oE '[a-f0-9]{32}' | head -1)
+          CUENTA=$(printf '%s' "$CUENTA_CRUDA" | grep -oiE '[a-f0-9]{32}' | head -1 | tr 'A-F' 'a-f')
+          if [ -z "$CUENTA" ]; then
+            # Si el Account ID no vino bien, se busca con el token
+            CUENTA=$(curl -s -H "Authorization: Bearer $T" https://api.cloudflare.com/client/v4/accounts | grep -oE '"id":"[a-f0-9]{32}"' | head -1 | grep -oE '[a-f0-9]{32}')
+            [ -n "$CUENTA" ] && echo "::warning::El secreto CLOUDFLARE_ACCOUNT_ID no tenía un Account ID válido; se usó el de tu cuenta ($CUENTA)."
+          fi
+          export CLOUDFLARE_ACCOUNT_ID="$CUENTA"
           export DEEPSEEK_API_KEY=$(printf '%s' "$CLAVE_CRUDA" | grep -oE 'sk-[A-Za-z0-9]+' | head -1)
           [ -z "$CLOUDFLARE_API_TOKEN" ] && { echo "::error::CLOUDFLARE_API_TOKEN no parece un token válido. Vuelve a copiarlo."; exit 1; }
-          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && { echo "::error::CLOUDFLARE_ACCOUNT_ID debe ser un código de 32 letras y números (Account ID)."; exit 1; }
+          [ -z "$CLOUDFLARE_ACCOUNT_ID" ] && { echo "::error::No se encontró el Account ID. Revisa el secreto CLOUDFLARE_ACCOUNT_ID (32 letras y números) o los permisos del token."; exit 1; }
           [ -z "$DEEPSEEK_API_KEY" ] && { echo "::error::DEEPSEEK_API_KEY debe empezar con sk-"; exit 1; }
           echo "::add-mask::$CLOUDFLARE_API_TOKEN"; echo "::add-mask::$DEEPSEEK_API_KEY"
           avisar() { echo "::error::$1: $(tr '\n' ' ' < salida.txt | sed 's/\x1b\[[0-9;]*m//g' | tail -c 900)"; }
