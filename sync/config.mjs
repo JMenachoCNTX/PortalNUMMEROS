@@ -21,7 +21,7 @@ export const HOJAS = {
   habilitados: { nombre: 'Habilitados' },   // si el ID está en la columna A = NO habilitado
   asegurados: { nombre: 'ASEGURADOS' },     // si el ID está en la columna A = presentó póliza
   anuncios: { nombre: 'Anuncios' },         // A Activo | B Imagen | C Link | D Orden | E Desde | F Hasta | G Título
-  avisos: { nombre: 'Avisos' },             // A Activo | B Título | C Mensaje | D Imagen | E Tipo | F Frecuencia | G Para quién | H Desde | I Hasta | J Texto botón | K Link botón
+  avisos: { nombre: 'Avisos' },             // Se ubica por encabezados: Activo | Título / Mensaje (1a línea = título) | Imagen | Tipo | Frecuencia | Para quién | Desde | Hasta | Botón (texto + link)
   faq: { nombre: 'FAQ' }                    // A Activo | B Categoría | C Pregunta | D Respuesta | E Orden
 };
 

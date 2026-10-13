@@ -68,7 +68,7 @@ async function leerTodo() {
     hoja(H.habilitados.nombre) + '!A2:A', hoja(H.asegurados.nombre) + '!A2:A'
   ]);
   const [anuncios] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.anuncios.nombre) + '!A2:G'], { opcional: true });
-  const [avisos] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.avisos.nombre) + '!A2:K'], { opcional: true });
+  const [avisos] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.avisos.nombre) + '!A1:N'], { opcional: true });
   const [faq] = await leerRangos(CFG.FAQ_SPREADSHEET_ID || CFG.SPREADSHEET_ID, [hoja(H.faq.nombre) + '!A2:E'], { opcional: true });
 
   const tramites = {};

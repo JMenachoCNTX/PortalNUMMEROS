@@ -86,4 +86,15 @@ assert.equal(claveDe(limpiarCelular('70000001'), '27391057'), 'NM-59170000001-27
 assert.equal(numero('1.234,50'), 1234.5);
 assert.ok(ordenFecha('03/10/2026') > ordenFecha('26/09/2026'));
 
+// Hoja Avisos real: encabezados y una sola columna "Título / Mensaje"
+const real = armar({ ...tablas, avisos: [
+  ['Activo', 'Título / Mensaje', 'Imagen', 'Tipo', 'Frecuencia', 'Para quién', 'Desde', 'Hasta', 'Botón'],
+  ['SI', '**📢 COMUNICADO OFICIAL - SEMANA 40**\n\nEstimados Repartidores,\n\nEl portal **ya está actualizado**.', '', 'Importante', 'Cada Ingreso', 'Todos', '', '', 'Escríbenos https://wa.me/59169021969']
+] }, CFG, { hoy: '2026-10-13' });
+const av = real.repartidores.get('27391057').avisos[0];
+assert.equal(av.titulo, 'COMUNICADO OFICIAL - SEMANA 40');
+assert.equal(av.mensaje, 'Estimados Repartidores,\n\nEl portal **ya está actualizado**.');
+assert.equal(av.tipo, 'IMPORTANTE'); assert.equal(av.frecuencia, 'CADA INGRESO');
+assert.equal(av.botonTexto, 'Escríbenos'); assert.equal(av.botonLink, 'https://wa.me/59169021969');
+
 console.log('✔ Todas las pruebas pasaron (' + repartidores.size + ' repartidores de ejemplo).');

@@ -60,6 +60,21 @@
   function conEnlaces(t) {
     return esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>');
   }
+  /* Texto de los avisos: **negrita**, párrafos, viñetas y enlaces; sin emojis */
+  function formatoAviso(t) {
+    t = String(t || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '');
+    return t.split(/\n\s*\n/).map(function (bloque) {
+      var lineas = bloque.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+      if (!lineas.length) return '';
+      var f = function (l) {
+        return esc(l).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*\*/g, '')
+          .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+      };
+      if (lineas.every(function (l) { return /^[-•*]\s+/.test(l); }))
+        return '<ul>' + lineas.map(function (l) { return '<li>' + f(l.replace(/^[-•*]\s+/, '')) + '</li>'; }).join('') + '</ul>';
+      return '<p>' + lineas.map(f).join('<br>') + '</p>';
+    }).join('');
+  }
   function numero(v) {
     if (typeof v === 'number') return v;
     if (v == null || v === '') return null;
@@ -675,12 +690,16 @@
     var m = document.createElement('div');
     m.className = 'modal';
     m.innerHTML = '<div class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="avisoTit">' +
-      '<div class="modal-cab ' + tipo + '">' + ic(tipo === 'INFO' ? 'info' : 'alerta') + '<span>' + nombres[tipo] + '</span>' + (obligado ? '' : '<button aria-label="Cerrar" data-cerrar>×</button>') + '</div>' +
+      '<div class="modal-cab ' + tipo + '"><div class="nm-patron oscuro" aria-hidden="true"></div>' +
+        '<div class="modal-fila"><img class="iso" src="marca/logos/nummeros-isotipo-blanco.svg" alt="">' +
+        '<span class="modal-chip">' + ic(tipo === 'INFO' ? 'info' : 'alerta') + nombres[tipo] + '</span>' +
+        (obligado ? '' : '<button class="modal-x" aria-label="Cerrar" data-cerrar>×</button>') + '</div>' +
+        '<h3 id="avisoTit">' + esc(a.titulo || nombres[tipo]) + '</h3></div>' +
       (a.imagen ? '<img src="' + esc(a.imagen) + '" alt="">' : '') +
-      '<div class="modal-cuerpo">' + (a.titulo ? '<h3 id="avisoTit">' + esc(a.titulo) + '</h3>' : '') + '<p>' + conEnlaces(a.mensaje) + '</p></div>' +
+      (a.mensaje ? '<div class="modal-cuerpo">' + formatoAviso(a.mensaje) + '</div>' : '') +
       '<div class="modal-pie">' + (a.botonLink ? '<a class="btn sec" href="' + esc(a.botonLink) + '" target="_blank" rel="noopener">' + esc(a.botonTexto || 'Ver más') + '</a>' : '') +
       '<button class="btn" data-ok>Entendido</button></div>' +
-      (cola.length > 1 ? '<div class="modal-cont">Aviso ' + (i + 1) + ' de ' + cola.length + '</div>' : '') + '</div>';
+      '<div class="modal-firma"><b>CONTAX · NUMMEROS</b><span>' + (cola.length > 1 ? 'Aviso ' + (i + 1) + ' de ' + cola.length : 'Comunicado oficial') + '</span></div></div>';
     document.body.appendChild(m);
     function cerrar(confirmo) {
       if (confirmo || a.frecuencia === 'UNA VEZ') {
@@ -750,7 +769,7 @@
         { numero: 'SOP-0142', tipo: 'Soporte – Problemas con pagos', fecha: '08/10/2026 10:12', asunto: 'No me llegó el pago de la semana 37', detalle: '001245', estado: 'En revisión', resolucion: '', comentario: 'Estamos verificando con Milthagor. Te respondemos hasta el viernes.', fechaRespuesta: '09/10/2026' },
         { numero: 'POL-0087', tipo: 'Póliza de Seguro', fecha: '15/09/2026 18:40', asunto: 'Seguros Illimani', etAsunto: 'Aseguradora', detalle: '15/09/2027', etDetalle: 'Vence el', estado: 'Vigente', resolucion: 'APROBADA', comentario: '' }
       ],
-      avisos: [{ codigo: 'demo1', titulo: 'Feriado del lunes', mensaje: 'Este lunes no habrá pagos por feriado nacional.\nLos pagos de la semana se realizarán el martes.', tipo: 'IMPORTANTE', frecuencia: 'UNA VEZ' }]
+      avisos: [{ codigo: 'demo1', titulo: 'COMUNICADO OFICIAL - FACTURACIÓN SEMANA 40', mensaje: 'Estimados Repartidores,\n\nNuestro portal **ya se encuentra actualizado** con la información de facturación de la **Semana 40 (Del 28 de Septiembre al 04 de Octubre 2026)**.\n\nAdicionalmente, podrán revisar si cuentan con **facturas pendientes** de emisión para sus pagos correspondientes.', tipo: 'IMPORTANTE', frecuencia: 'CADA INGRESO' }]
     };
     S.datos.resumen = {
       pendientes: { cantidad: 3, total: 415.2 + 512.8 + 317.5 },
