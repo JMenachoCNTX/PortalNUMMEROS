@@ -129,7 +129,7 @@ async function sincronizarCuentas(repartidores, estado) {
     if (estado.cuentas[r.uid] !== h) cambios.push({ r, email, password, h });
   }
   log('Cuentas a crear o actualizar: ' + cambios.length);
-  let ok = 0, mal = 0;
+  let ok = 0, mal = 0; const errores = {};
   await enParalelo(cambios, 6, async ({ r, email, password, h }) => {
     try {
       try { await auth.updateUser(r.uid, { email, password, disabled: false, displayName: r.nombre.slice(0, 100) }); }
@@ -138,7 +138,7 @@ async function sincronizarCuentas(repartidores, estado) {
         await auth.createUser({ uid: r.uid, email, password, displayName: r.nombre.slice(0, 100) });
       }
       estado.cuentas[r.uid] = h; ok++;
-    } catch (e) { mal++; log('  Cuenta ' + r.id + ': ' + e.message); }
+    } catch (e) { mal++; errores[e.code || e.message] = (errores[e.code || e.message] || 0) + 1; log('  Cuenta ' + r.id + ': ' + e.message); }
   });
   // Los que ya no están en BDYANGO: se desactivan (no se borran)
   const fuera = Object.keys(estado.cuentas).filter(uid => !repartidores.has(uid));
@@ -146,6 +146,8 @@ async function sincronizarCuentas(repartidores, estado) {
     try { await auth.updateUser(uid, { disabled: true }); } catch (e) { if (e.code !== 'auth/user-not-found') log('  Desactivar ' + uid + ': ' + e.message); }
     delete estado.cuentas[uid];
   });
+  console.log('::notice::Cuentas · por crear o actualizar: ' + cambios.length + ' · listas: ' + ok + ' · con error: ' + mal +
+    (mal ? ' (' + Object.entries(errores).map(([k, v]) => k + ': ' + v).join(', ') + ')' : '') + ' · total registradas: ' + Object.keys(estado.cuentas).length);
   log('Cuentas listas: ' + ok + (mal ? ' · con error: ' + mal : '') + (fuera.length ? ' · desactivadas: ' + fuera.length : ''));
 }
 
