@@ -79,6 +79,24 @@ function doGet() {
 
 ---
 
+## Panel de administrador (v3.1)
+1. Entra al portal con el usuario de prueba: celular `78015123`, ID `1234`.
+2. Ya adentro, el portal pide la **clave de administrador** (secreto `ADMIN_CLAVE` en GitHub; mínimo 10 caracteres).
+3. Aparece la sección **Administración**: Panel, Anuncios, Avisos, Preguntas y Chats y lecturas.
+
+- Avisos y preguntas se publican al instante. Las imágenes nuevas tardan unos 15 minutos (el robot las pasa a GitHub).
+- Para cambiar la clave: edita el secreto `ADMIN_CLAVE` y corre la sincronización.
+- Las hojas **Anuncios, Avisos, FAQ, ChatLog y AvisosLeidos** de CONTROL ya no se usan: se copiaron una sola vez a Firebase (los chats y lecturas viejos quedan en "Chats y lecturas").
+
+## Asistente con IA (DeepSeek por Cloudflare)
+- El código está en `asistente/`. GitHub lo publica solo en Cloudflare (`.github/workflows/asistente.yml`).
+- Secretos necesarios en GitHub: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
+- La dirección del asistente va en `config.js` → `ia.url`. Si está vacía, el botón "Asistente" no aparece.
+- Solo responde a quien inició sesión en el portal y limita 15 preguntas cada 10 minutos por persona.
+
+## Reporte en PDF
+En **Reporte** el repartidor elige el período y toca **Descargar PDF**. El PDF se arma en su propio celular (no gasta lecturas de Firebase).
+
 ## Cómo entra un repartidor
 - **Celular:** el de la columna D de BDYANGO (con o sin 591).
 - **ID de Yango:** el de la columna B.
@@ -92,9 +110,6 @@ Si un repartidor sale de BDYANGO, su acceso se desactiva solo.
 | BDYANGO | Quién puede entrar (ID, nombre, celular) |
 | PPendientes / Pagos | Pagos pendientes e historial |
 | Habilitados / ASEGURADOS | Alerta de habilitación y estado de póliza |
-| Anuncios | Imágenes del carrusel del inicio |
-| Avisos | Ventanas emergentes (las lecturas quedan en Firebase) |
-| FAQ | Preguntas frecuentes |
 | Archivos de trámites | Estado de cada formulario |
 
 Los formularios, la encuesta y la configuración de trámites están en `sync/config.mjs`.
@@ -112,6 +127,5 @@ Los formularios, la encuesta y la configuración de trámites están en `sync/co
 | `anuncios/` | Imágenes de anuncios (las pone el robot) |
 
 ## Notas
-- **Asistente con DeepSeek:** apagado en esta versión. Vuelve en una segunda etapa (necesita el plan Blaze de Firebase).
 - GitHub pausa las tareas programadas de un repositorio público si pasan 60 días sin ningún cambio. Si eso pasa, en **Actions** aparece un botón para reactivarlas.
 - Probar la lógica sin internet: `cd sync && npm install && node probar.mjs`.

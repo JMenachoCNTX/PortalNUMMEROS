@@ -1,0 +1,44 @@
+name: Publicar asistente con IA (Cloudflare)
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['asistente/**', '.github/workflows/asistente.yml']
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Revisar secretos
+        id: sec
+        env:
+          T: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          A: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          falta=""
+          [ -z "$T" ] && falta="$falta CLOUDFLARE_API_TOKEN"
+          [ -z "$A" ] && falta="$falta CLOUDFLARE_ACCOUNT_ID"
+          [ -z "$D" ] && falta="$falta DEEPSEEK_API_KEY"
+          if [ -n "$falta" ]; then echo "::warning::Todavía faltan estos secretos en GitHub:$falta. El asistente se publicará cuando estén."; echo "listo=no" >> "$GITHUB_OUTPUT"; else echo "listo=si" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Publicar en Cloudflare
+        id: cf
+        if: steps.sec.outputs.listo == 'si'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: asistente
+          secrets: |
+            DEEPSEEK_API_KEY
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
+      - name: Dirección del asistente
+        if: steps.sec.outputs.listo == 'si'
+        run: echo "::notice::Asistente publicado en ${{ steps.cf.outputs.deployment-url }}"

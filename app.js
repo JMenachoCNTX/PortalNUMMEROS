@@ -19,7 +19,10 @@
     avisosVistos: false,
     usuario: null,
     carrusel: null,
-    grafico: null
+    grafico: null,
+    admin: false,         // sesión de administrador
+    contenido: null,      // anuncios, avisos y preguntas tal como se editan
+    adminPreguntado: false
   };
 
   /* ── Íconos de línea (sin emojis, regla de marca) ── */
@@ -46,6 +49,21 @@
     reloj: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/>',
     estrella: '<path d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>',
+    panel: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+    imagen: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+    megafono: '<path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M17 8.5a5 5 0 0 1 0 7"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
+    candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    descargar: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+    mas2: '<path d="M12 5v14M5 12h14"/>',
+    editar: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+    borrar: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+    arriba: '<path d="m6 15 6-6 6 6"/>',
+    abajo: '<path d="m6 9 6 6 6-6"/>',
+    ojo: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    subir: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
+    copiar: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+    enviar: '<path d="M4 12 20 4l-6 16-3-7z"/>',
     whatsapp: '<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5 5 16.2a8.5 8.5 0 1 1 15.5-4.6z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2.2-1-1 .9a5 5 0 0 1-2.6-2.6l.9-1-1-2.2z"/>'
   };
   function ic(n) { return '<span class="ic"><svg viewBox="0 0 24 24" ' + T + ' aria-hidden="true">' + (IC[n] || '') + '</svg></span>'; }
@@ -155,16 +173,21 @@
     }
     auth.onAuthStateChanged(function (u) {
       S.usuario = u;
-      if (!u) { S.datos = null; pintarLogin(); return; }
-      cargarDatos();
+      if (!u) { S.datos = null; S.admin = false; pintarLogin(); return; }
+      u.getIdTokenResult().then(function (t) {
+        S.admin = !!(t.claims && t.claims.admin);
+        cargarDatos();
+      }, function () { S.admin = false; cargarDatos(); });
     });
   }
 
   function cargarDatos() {
-    var uid = S.usuario.uid;
+    // El administrador ve el portal con los datos del usuario de prueba
+    var uid = S.admin ? idSeguro(C.accesoAdmin) : S.usuario.uid;
     Promise.all([
       db.collection('repartidores').doc(uid).get(),
       db.collection('publico').doc('portal').get(),
+      db.collection('publico').doc('contenido').get(),
       db.collection('repartidores').doc(uid).collection('lecturas').get()
     ]).then(function (r) {
       if (!r[0].exists) {
@@ -174,13 +197,52 @@
       }
       S.datos = r[0].data();
       S.publico = r[1].exists ? r[1].data() : {};
+      aplicarContenido(r[2].exists ? r[2].data() : {});
       S.lecturas = {};
-      r[2].forEach(function (d) { S.lecturas[d.id] = true; });
+      r[3].forEach(function (d) { S.lecturas[d.id] = true; });
       arrancarApp();
     }).catch(function (e) {
       console.error(e);
       pintarMensaje('No pudimos cargar tus datos', 'Revisa tu conexión a internet e intenta de nuevo.');
     });
+  }
+
+  /* Anuncios, avisos y preguntas (se editan en el panel de administrador) */
+  function hoyISO() {
+    var d = new Date(), z = function (x) { return (x < 10 ? '0' : '') + x; };
+    return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
+  }
+  function vigente(it) {
+    var h = hoyISO();
+    return it && it.activo !== false && (!it.desde || h >= it.desde) && (!it.hasta || h <= it.hasta);
+  }
+  function aplicaAviso(a, d) {
+    switch (a.paraQuien) {
+      case 'NO HABILITADOS': return d.habilitado === false;
+      case 'SIN POLIZA': return !d.poliza;
+      case 'CON PENDIENTES': return (d.pendientes || []).length > 0;
+      case 'IDS': return String(a.ids || '').split(/[,;\s]+/).some(function (x) { return x && idSeguro(x).toUpperCase() === idSeguro(d.id).toUpperCase(); });
+      default: return true;
+    }
+  }
+  function aplicarContenido(c) {
+    S.contenido = c || {};
+    S.publico = S.publico || {};
+    S.publico.anuncios = (S.contenido.anuncios || []).filter(function (a) { return vigente(a) && a.imagen; })
+      .sort(function (a, b) { return (a.orden || 999) - (b.orden || 999); });
+    var cats = [], porCat = {};
+    (S.contenido.preguntas || []).forEach(function (q) {
+      if (!vigente(q) || !q.p || !q.r) return;
+      var c = q.categoria || 'General';
+      if (!porCat[c]) { porCat[c] = []; cats.push(c); }
+      porCat[c].push(q);
+    });
+    S.publico.preguntas = cats.map(function (c) {
+      return { nombre: c, preguntas: porCat[c].sort(function (a, b) { return (a.orden || 999) - (b.orden || 999); }).map(function (q) { return { p: q.p, r: q.r }; }) };
+    });
+    var peso = { URGENTE: 0, IMPORTANTE: 1, INFO: 2 };
+    if (S.datos) S.datos.avisos = (S.contenido.avisos || []).filter(function (a) { return vigente(a) && aplicaAviso(a, S.datos); })
+      .sort(function (a, b) { return (peso[a.tipo] == null ? 2 : peso[a.tipo]) - (peso[b.tipo] == null ? 2 : peso[b.tipo]); });
   }
 
   function pintarMensaje(titulo, texto) {
@@ -269,6 +331,7 @@
 
   function salir() {
     pararCarrusel();
+    if (window.NM_CHAT) window.NM_CHAT.quitar();
     S.datos = null; S.avisosVistos = false;
     if (DEMO) { guardar('nm_demo_sesion', '0'); pintarLogin(); return; }
     auth.signOut();
@@ -280,7 +343,7 @@
     { id: 'inicio', t: 'Inicio', i: 'inicio' },
     { id: 'pendientes', t: 'Pendientes', i: 'pendientes' },
     { id: 'historial', t: 'Historial', i: 'historial' },
-    { id: 'resumen', t: 'Resumen', i: 'resumen' },
+    { id: 'reporte', t: 'Reporte', i: 'resumen' },
     { sec: 'Ayuda' },
     { id: 'tramites', t: 'Mis trámites', i: 'tramites' },
     { id: 'preguntas', t: 'Preguntas', i: 'preguntas' },
@@ -295,6 +358,16 @@
     { id: 'mas', t: 'Más', i: 'mas' }
   ];
 
+  var MENU_ADMIN = [
+    { sec: 'Administración' },
+    { id: 'admin', t: 'Panel', i: 'panel' },
+    { id: 'admin-anuncios', t: 'Anuncios', i: 'imagen' },
+    { id: 'admin-avisos', t: 'Avisos', i: 'megafono' },
+    { id: 'admin-preguntas', t: 'Preguntas', i: 'preguntas' },
+    { id: 'admin-registros', t: 'Chats y lecturas', i: 'chat' }
+  ];
+  function menu() { return S.admin ? MENU.concat(MENU_ADMIN) : MENU; }
+
   function cuentas() {
     var d = S.datos || {};
     var tr = (d.tramites || []).filter(function (t) { return claseTramite(t) !== 'ok'; }).length;
@@ -307,7 +380,7 @@
       (DEMO ? '<div class="demo-cinta">Modo demostración: estos datos son de ejemplo. Los datos reales aparecen cuando se conecte Firebase.</div>' : '') +
       '<header class="hdr">' +
         '<button class="hdr-brand" data-ir="inicio" aria-label="Ir al inicio"><img src="marca/logos/nummeros-logotipo-horizontal-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS">' +
-        '<span class="hdr-emp"><b>Portal CONTAX</b>' + esc(d.nombre || '') + '</span></button>' +
+        '<span class="hdr-emp"><b>Portal CONTAX</b>' + (S.admin ? 'Administrador' : esc(d.nombre || '')) + '</span></button>' +
         '<div class="hdr-r">' +
           '<span class="hdr-sync">' + (ultimaSync() ? 'Datos al ' + fechaTexto(ultimaSync()) : '') + '</span>' +
           '<button class="hdr-btn solo" data-accion="tema" aria-label="Cambiar modo claro u oscuro">' + ic(S.oscuro ? 'sol' : 'luna') + '</button>' +
@@ -320,19 +393,64 @@
       '</div>' +
       '<nav class="tabbar" id="tabbar" aria-label="Menú"></nav>';
     var h = (location.hash || '').replace('#/', '');
+    if (h === 'resumen') h = 'reporte';
+    if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js?v=' + C.version, function () { ir(PAGINAS[h] ? h : 'admin', true); }); }
     ir(PAGINAS[h] ? h : 'inicio', true);
-    if (!S.avisosVistos) { S.avisosVistos = true; setTimeout(mostrarAvisos, 500); }
+    if (window.NM_CHAT && ((C.ia && C.ia.url) || DEMO)) window.NM_CHAT.montar();
+    if (S.datos.id === C.accesoAdmin && !S.admin && !S.adminPreguntado && !DEMO) { S.adminPreguntado = true; setTimeout(preguntarAdmin, 300); return; }
+    if (!S.avisosVistos && !S.admin) { S.avisosVistos = true; setTimeout(mostrarAvisos, 500); }
+  }
+
+  function cargarScript(src, listo) {
+    var s = document.createElement('script');
+    s.src = src; s.onload = listo || null;
+    s.onerror = function () { aviso('No se pudo cargar una parte del portal. Revisa tu conexión.'); };
+    document.head.appendChild(s);
+  }
+
+  /* Clave extra: solo aparece para el usuario de prueba */
+  function preguntarAdmin() {
+    var m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = '<form class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="admTit" novalidate>' +
+      '<div class="modal-cab"><div class="nm-patron oscuro" aria-hidden="true"></div>' +
+        '<div class="modal-fila"><img class="iso" src="marca/logos/nummeros-isotipo-blanco.svg" alt=""><span class="modal-chip">' + ic('candado') + 'Acceso restringido</span></div>' +
+        '<h3 id="admTit">Clave de administrador</h3></div>' +
+      '<div class="modal-cuerpo"><p>Si tienes la clave, escríbela para editar anuncios, avisos y preguntas. Si no, sigue como usuario de prueba.</p>' +
+        '<div class="fm-campo"><label for="admClave">Clave</label><input id="admClave" type="password" autocomplete="current-password" required></div>' +
+        '<div class="nm-login-err" id="admErr" role="alert"></div></div>' +
+      '<div class="modal-pie"><button type="button" class="btn sec" data-seguir>Seguir sin clave</button><button class="btn" type="submit" id="admBtn">Entrar</button></div>' +
+      '<div class="modal-firma"><b>CONTAX · NUMMEROS</b><span>Panel de administrador</span></div></form>';
+    document.body.appendChild(m);
+    var inp = m.querySelector('#admClave');
+    inp.focus();
+    m.querySelector('[data-seguir]').addEventListener('click', function () {
+      m.remove(); if (!S.avisosVistos) { S.avisosVistos = true; mostrarAvisos(); }
+    });
+    m.querySelector('form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var err = m.querySelector('#admErr'), btn = m.querySelector('#admBtn');
+      if (!inp.value) { err.textContent = 'Escribe la clave.'; return; }
+      btn.disabled = true; btn.textContent = 'Verificando…'; err.textContent = '';
+      auth.signInWithEmailAndPassword(C.correoAdmin, inp.value).then(function () {
+        m.remove();   // onAuthStateChanged recarga el portal en modo administrador
+      }, function (ex) {
+        btn.disabled = false; btn.textContent = 'Entrar';
+        err.textContent = /too-many/.test(ex && ex.code) ? 'Demasiados intentos. Espera unos minutos.' : 'Clave incorrecta.';
+        inp.value = ''; inp.focus();
+      });
+    });
   }
 
   function pintarMenus() {
     var n = cuentas();
-    document.getElementById('nav').innerHTML = MENU.map(function (m) {
+    document.getElementById('nav').innerHTML = menu().map(function (m) {
       if (m.sec) return '<span class="nav-sec">' + m.sec + '</span>';
       var c = n[m.id] ? '<span class="cuenta">' + n[m.id] + '</span>' : '';
       return '<button class="nav-link' + (S.pagina === m.id ? ' active' : '') + '" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span>' + c + '</button>';
     }).join('') +
       '<div class="nav-pie"><img src="marca/logos/nummeros-logotipo-firma-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS by CONTAX">Portal CONTAX · v' + esc(C.version) + '</div>';
-    var enMas = ['resumen', 'preguntas', 'contacto', 'instalar'].indexOf(S.pagina) >= 0;
+    var enMas = ['reporte', 'preguntas', 'contacto', 'instalar'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
     document.getElementById('tabbar').innerHTML = TABS.map(function (t) {
       var on = t.id === S.pagina || (t.id === 'mas' && enMas);
       return '<button class="' + (on ? 'on' : '') + '" ' + (t.id === 'mas' ? 'data-accion="mas"' : 'data-ir="' + t.id + '"') + '><i>' + ic(t.i) + '</i>' + t.t + '</button>';
@@ -408,7 +526,7 @@
           '<div class="nm-kpis">' +
             '<button class="nm-kpi" data-ir="pendientes"><small>Por cobrar</small><b>' + bs(pend.total) + '</b><em>' + pend.cantidad + ' semana' + (pend.cantidad === 1 ? '' : 's') + ' pendiente' + (pend.cantidad === 1 ? '' : 's') + '</em></button>' +
             '<button class="nm-kpi" data-ir="historial"><small>Último pago</small><b>' + (ultimo ? bs(ultimo.importe) : '—') + '</b><em>' + (ultimo ? esc(ultimo.fechaPago || '') : 'Sin pagos aún') + '</em></button>' +
-            '<button class="nm-kpi" data-ir="resumen"><small>Total cobrado</small><b>' + bs(pag.total) + '</b><em>' + pag.cantidad + ' pago' + (pag.cantidad === 1 ? '' : 's') + '</em></button>' +
+            '<button class="nm-kpi" data-ir="reporte"><small>Total cobrado</small><b>' + bs(pag.total) + '</b><em>' + pag.cantidad + ' pago' + (pag.cantidad === 1 ? '' : 's') + '</em></button>' +
           '</div>' +
         '</section>' +
         '<figure class="nm-inicio-foto"><img src="marca/clasicos/' + (S.oscuro ? 'arquimedes-eureka' : 'pitagoras-celular') + '.jpg" alt="Escultura griega revisando un celular">' +
@@ -468,33 +586,101 @@
       '</div>';
   };
 
-  PAGINAS.resumen = function () {
-    var r = S.datos.resumen || {}, pe = r.pendientes || { cantidad: 0, total: 0 }, pa = r.pagados || { cantidad: 0, total: 0 };
-    var prom = pa.cantidad ? pa.total / pa.cantidad : null;
-    return titulo('Resumen', 'Tus números en un vistazo.') +
-      '<div class="nm-kpis" style="margin-bottom:14px">' +
-        '<div class="nm-kpi"><small>Total cobrado</small><b>' + bs(pa.total) + '</b><em>' + pa.cantidad + ' pagos</em></div>' +
-        '<div class="nm-kpi"><small>Por cobrar</small><b>' + bs(pe.total) + '</b><em>' + pe.cantidad + ' semanas</em></div>' +
-        '<div class="nm-kpi"><small>Promedio por pago</small><b>' + bs(prom) + '</b><em>de lo ya cobrado</em></div>' +
+  /* ── Reporte completo (se descarga en PDF con reporte.js) ── */
+  var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  var PERIODOS = [['todo', 'Todo'], ['anio', 'Este año'], ['6m', 'Últimos 6 meses'], ['3m', 'Últimos 3 meses']];
+  function fechaDe(t) {
+    var m = String(t || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (!m) return null;
+    return new Date(m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  }
+  function datosReporte(periodo) {
+    var d = S.datos || {}, hoy = new Date(), desde = null;
+    if (periodo === 'anio') desde = new Date(hoy.getFullYear(), 0, 1);
+    if (periodo === '6m') desde = new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1);
+    if (periodo === '3m') desde = new Date(hoy.getFullYear(), hoy.getMonth() - 2, 1);
+    var hist = (d.historial || []).filter(function (p) { var f = fechaDe(p.fechaPago); return !desde || (f && f >= desde); });
+    var total = hist.reduce(function (s, p) { return s + (numero(p.importe) || 0); }, 0);
+    var mejor = hist.reduce(function (m, p) { return !m || (numero(p.importe) || 0) > (numero(m.importe) || 0) ? p : m; }, null);
+    var porMes = {}, orden = [];
+    hist.forEach(function (p) {
+      var f = fechaDe(p.fechaPago); if (!f) return;
+      var k = f.getFullYear() + '-' + (f.getMonth() < 9 ? '0' : '') + (f.getMonth() + 1);
+      if (!porMes[k]) { porMes[k] = { clave: k, nombre: MESES[f.getMonth()] + ' ' + f.getFullYear(), corto: MESES[f.getMonth()].slice(0, 3) + ' ' + String(f.getFullYear()).slice(2), pagos: 0, total: 0 }; orden.push(k); }
+      porMes[k].pagos++; porMes[k].total += numero(p.importe) || 0;
+    });
+    var meses = orden.sort().map(function (k) { return porMes[k]; });
+    var pend = d.pendientes || [];
+    return {
+      periodo: periodo, nombrePeriodo: (PERIODOS.filter(function (x) { return x[0] === periodo; })[0] || PERIODOS[0])[1],
+      desde: desde, hasta: hoy, datos: d, historial: hist, meses: meses, pendientes: pend, tramites: d.tramites || [],
+      total: total, cantidad: hist.length, promedio: hist.length ? total / hist.length : null, mejor: mejor,
+      totalPendiente: pend.reduce(function (s, p) { return s + (numero(p.importe) || 0); }, 0),
+      sincronizado: ultimaSync()
+    };
+  }
+  PAGINAS.reporte = function () {
+    var R = datosReporte(S.periodo || 'todo'), d = R.datos;
+    var fila = function (k, v) { return '<div class="dato"><span>' + k + '</span><div><b>' + v + '</b></div></div>'; };
+    return titulo('Reporte', 'Toda tu información con CONTAX en un solo lugar.',
+        '<button class="btn" data-accion="pdf">' + ic('descargar') + 'Descargar PDF</button>') +
+      '<div class="segmento" role="tablist" aria-label="Período del reporte">' + PERIODOS.map(function (p) {
+        return '<button role="tab" aria-selected="' + (R.periodo === p[0]) + '" class="' + (R.periodo === p[0] ? 'on' : '') + '" data-periodo="' + p[0] + '">' + p[1] + '</button>';
+      }).join('') + '</div>' +
+      '<div class="grid2">' +
+        '<div class="card"><div class="h2">Mis datos</div>' +
+          fila('Nombre', esc(d.nombre)) + fila('ID de Yango', '<span class="num">' + esc(d.id) + '</span>') +
+          fila('Celular', '<span class="num">' + esc(telVisible(d.celular || '')) + '</span>') +
+          fila('Pago habilitado por la app', d.habilitado === false ? '<span class="chip mal">No habilitado</span>' : '<span class="chip ok">Habilitado</span>') +
+          fila('Póliza de seguro', d.poliza ? '<span class="chip ok">Presentada</span>' : '<span class="chip pend">No presentada</span>') +
+        '</div>' +
+        '<div class="nm-kpis rep-kpis">' +
+          '<div class="nm-kpi"><small>Total cobrado</small><b>' + bs(R.total) + '</b><em>' + esc(R.nombrePeriodo.toLowerCase()) + '</em></div>' +
+          '<div class="nm-kpi"><small>Pagos recibidos</small><b class="num">' + R.cantidad + '</b><em>semanas pagadas</em></div>' +
+          '<div class="nm-kpi"><small>Promedio por pago</small><b>' + bs(R.promedio) + '</b><em>' + (R.mejor ? 'mejor: ' + bs(R.mejor.importe) : 'sin pagos aún') + '</em></div>' +
+          '<div class="nm-kpi"><small>Por cobrar</small><b>' + bs(R.totalPendiente) + '</b><em>' + R.pendientes.length + ' semana' + (R.pendientes.length === 1 ? '' : 's') + '</em></div>' +
+        '</div>' +
       '</div>' +
-      '<div class="card"><div class="h2">Pagos recibidos por semana <small>últimas 12</small></div>' +
-        ((S.datos.historial || []).length ? '<div class="grafico"><canvas id="grafico" aria-label="Gráfico de pagos por semana"></canvas></div>' : vacio('Aún no hay pagos para graficar')) +
+      '<div class="card"><div class="h2">Cobrado por mes <small>' + esc(R.nombrePeriodo) + '</small></div>' +
+        (R.meses.length ? '<div class="grafico"><canvas id="grafico" aria-label="Gráfico de lo cobrado por mes"></canvas></div>' +
+          '<div class="tabla-caja tabla-movil" style="margin-top:14px"><table><thead><tr><th>Mes</th><th class="num">Pagos</th><th class="monto">Total</th></tr></thead><tbody>' +
+          R.meses.slice().reverse().map(function (m) { return '<tr><td data-et="Mes"><b>' + m.nombre + '</b></td><td data-et="Pagos" class="num">' + m.pagos + '</td><td class="monto" data-et="Total">' + bs(m.total) + '</td></tr>'; }).join('') +
+          '</tbody></table></div>'
+        : vacio('No hay pagos en este período', 'Prueba con "Todo".')) +
+      '</div>' +
+      '<div class="card"><div class="h2">Pagos pendientes <small>' + R.pendientes.length + '</small></div>' +
+        (R.pendientes.length ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Semana</th><th>Período</th><th>Estado</th><th class="monto">Importe</th></tr></thead><tbody>' +
+          R.pendientes.map(function (p) { return '<tr><td data-et="Semana" class="num"><b>' + esc(p.semana) + '</b></td><td data-et="Período">' + esc(p.rango) + '</td><td data-et="Estado"><span class="chip pend">' + esc(p.estado || 'Pendiente') + '</span></td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>'; }).join('') +
+          '</tbody><tfoot><tr><td colspan="3">Total por cobrar</td><td class="monto" data-et="Total por cobrar">' + bs(R.totalPendiente) + '</td></tr></tfoot></table></div>'
+          : vacio('No tienes pagos pendientes')) +
+      '</div>' +
+      '<div class="card"><div class="h2">Pagos recibidos <small>' + R.cantidad + '</small></div>' +
+        (R.cantidad ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Fecha de pago</th><th>Semana</th><th>Período</th><th class="monto">Importe</th></tr></thead><tbody>' +
+          R.historial.map(function (p) { return '<tr><td data-et="Fecha de pago"><b>' + esc(p.fechaPago) + '</b></td><td data-et="Semana" class="num">' + esc(p.semana) + '</td><td data-et="Período">' + esc(p.rango) + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>'; }).join('') +
+          '</tbody><tfoot><tr><td colspan="3">Total cobrado</td><td class="monto" data-et="Total cobrado">' + bs(R.total) + '</td></tr></tfoot></table></div>'
+          : vacio('No hay pagos en este período')) +
+      '</div>' +
+      '<div class="card"><div class="h2">Trámites <small>' + R.tramites.length + '</small></div>' +
+        (R.tramites.length ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Número</th><th>Tipo</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>' +
+          R.tramites.map(function (t) { return '<tr><td data-et="Número"><b class="num">' + esc(t.numero) + '</b></td><td data-et="Tipo">' + esc(t.tipo) + '</td><td data-et="Fecha">' + esc(String(t.fecha || '').slice(0, 10)) + '</td><td data-et="Estado">' + chipEstado(t) + '</td></tr>'; }).join('') +
+          '</tbody></table></div>' : vacio('No tienes trámites')) +
       '</div>';
   };
-  DESPUES.resumen = function () {
-    var lista = (S.datos.historial || []).slice(0, 12).reverse();
+  DESPUES.reporte = function () {
+    var R = datosReporte(S.periodo || 'todo');
     var cv = document.getElementById('grafico');
-    if (!cv || !lista.length) return;
+    if (!cv || !R.meses.length) return;
     function dibujar() {
       if (!window.Chart) { setTimeout(dibujar, 300); return; }
+      if (!document.body.contains(cv)) return;
       var css = getComputedStyle(document.body);
       var suave = css.getPropertyValue('--nm-suave').trim(), borde = css.getPropertyValue('--nm-borde').trim();
       S.grafico = new Chart(cv, {
         type: 'bar',
         data: {
-          labels: lista.map(function (p) { return /^\d+$/.test(String(p.semana)) ? 'Sem ' + p.semana : String(p.semana); }),
-          datasets: [{ label: 'Importe', data: lista.map(function (p) { return numero(p.importe) || 0; }),
-            backgroundColor: S.oscuro ? '#8EB69B' : '#235347', borderRadius: 6, maxBarThickness: 38 }]
+          labels: R.meses.map(function (m) { return m.corto; }),
+          datasets: [{ label: 'Cobrado', data: R.meses.map(function (m) { return Math.round(m.total * 100) / 100; }),
+            backgroundColor: S.oscuro ? '#8EB69B' : '#235347', borderRadius: 6, maxBarThickness: 42 }]
         },
         options: {
           maintainAspectRatio: false,
@@ -617,14 +803,28 @@
       '</div>';
   };
 
+  function descargarPDF(btn) {
+    var R = datosReporte(S.periodo || 'todo');
+    var txt = btn.innerHTML;
+    btn.disabled = true; btn.textContent = 'Preparando PDF…';
+    function listo() { btn.disabled = false; btn.innerHTML = txt; }
+    function generar() {
+      window.NM_PDF.generar(R, API).then(listo, function (e) { console.error(e); listo(); aviso('No se pudo generar el PDF. Intenta de nuevo.'); });
+    }
+    if (window.NM_PDF) generar(); else cargarScript('reporte.js?v=' + C.version, generar);
+  }
+
   /* ── Hoja "Más" del celular ── */
   function abrirMas() {
     var h = document.createElement('div');
     h.className = 'hoja-mas'; h.id = 'hojaMas';
     h.innerHTML = '<div class="fondo" data-accion="cerrarMas"></div><div class="hoja" role="dialog" aria-label="Más opciones"><div class="agarre"></div>' +
-      [['resumen', 'Resumen'], ['preguntas', 'Preguntas'], ['contacto', 'Contacto'], ['instalar', 'Instalar en el celular']].map(function (m) {
-        return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[0]) + '<span>' + m[1] + '</span></button>';
+      [['reporte', 'Reporte', 'resumen'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
+        return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span></button>';
       }).join('') +
+      (S.admin ? '<span class="nav-sec">Administración</span>' + MENU_ADMIN.slice(1).map(function (m) {
+        return '<button class="nav-link" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span></button>';
+      }).join('') : '') +
       '<button class="nav-link" data-accion="tema">' + ic(S.oscuro ? 'sol' : 'luna') + '<span>' + (S.oscuro ? 'Modo claro' : 'Modo oscuro') + '</span></button>' +
       '<button class="nav-link" data-accion="salir" style="color:var(--nm-error)">' + ic('salir') + '<span>Salir</span></button></div>';
     document.body.appendChild(h);
@@ -706,9 +906,10 @@
         vistos[a.codigo] = Date.now();
         guardar('nm_avisos_' + (S.datos.id || ''), JSON.stringify(vistos));
       }
-      if (confirmo && a.frecuencia !== 'CADA INGRESO' && !DEMO) {
+      if (confirmo && a.frecuencia !== 'CADA INGRESO' && !DEMO && !S.admin && !a.previa) {
         db.collection('repartidores').doc(S.usuario.uid).collection('lecturas').doc(a.codigo)
-          .set({ fecha: firebase.firestore.FieldValue.serverTimestamp(), titulo: String(a.titulo || '').slice(0, 200) })
+          .set({ fecha: firebase.firestore.FieldValue.serverTimestamp(), titulo: String(a.titulo || '').slice(0, 200),
+            codigo: a.codigo, id: String(S.datos.id || ''), nombre: String(S.datos.nombre || '').slice(0, 120) })
           .catch(function (e) { console.warn('No se pudo registrar la lectura', e); });
       }
       m.remove();
@@ -731,6 +932,8 @@
       (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { aviso('Copiado: ' + t); }, function () { aviso(t); });
       return;
     }
+    var per = e.target.closest('[data-periodo]');
+    if (per) { S.periodo = per.getAttribute('data-periodo'); ir('reporte', true); return; }
     var a = e.target.closest('[data-accion]');
     if (!a) return;
     var acc = a.getAttribute('data-accion');
@@ -738,6 +941,7 @@
     else if (acc === 'mas') abrirMas();
     else if (acc === 'cerrarMas') cerrarMas();
     else if (acc === 'recargar') location.reload();
+    else if (acc === 'pdf') descargarPDF(a);
     else if (acc === 'instalar' && eventoInstalar) { eventoInstalar.prompt(); eventoInstalar = null; }
     else if (acc === 'tema') {
       S.oscuro = !S.oscuro; guardar('nm_oscuro', S.oscuro ? '1' : '0'); aplicarTema(); cerrarMas();
@@ -776,7 +980,7 @@
       pagados: { cantidad: 6, total: 486 + 538.4 + 402.1 + 611.9 + 455 + 389.7 }
     };
     S.publico = {
-      anuncios: [],
+      totalRepartidores: 3376,
       formularios: [
         { clave: 'soporte', nombre: 'Soporte – Problemas con pagos', descripcion: 'Si un pago no te llegó o el monto no cuadra.', url: '#' },
         { clave: 'polizas', nombre: 'Póliza de seguro', descripcion: 'Presenta o actualiza tu póliza.', url: '#' },
@@ -793,8 +997,30 @@
       encuesta: { titulo: '¿Cómo te atendemos?', texto: 'Tu opinión nos ayuda a mejorar. Son 2 minutos.', textoBoton: 'Calificar el servicio', url: '#' }
     };
     S.lecturas = {};
+    S.admin = /[?&]admin\b/.test(location.search);
+    aplicarContenido({
+      anuncios: [
+        { id: 'a1', activo: true, orden: 1, titulo: 'Contax Consultora', fuente: 'subida:a1', imagen: 'anuncios/1XLpL88BPof26oe3QF5_uesfbYb-tIp6o.png', link: '' },
+        { id: 'a2', activo: true, orden: 2, titulo: 'Yango', fuente: 'subida:a2', imagen: 'anuncios/1JevTkXmhsnqU5YlGFN-QdjSu9-5KJ1g_.png', link: '' },
+        { id: 'a3', activo: false, orden: 3, titulo: 'Junkers Car Wash', fuente: 'subida:a3', imagen: 'anuncios/1N-DSwktSwuFcOBW_DQQVUK2VRnis5y4p.png', link: 'https://wa.me/59169021969', hasta: '2026-12-31' }
+      ],
+      avisos: S.datos.avisos.map(function (a) { return Object.assign({ id: 'v1', activo: true, paraQuien: 'TODOS' }, a); }),
+      preguntas: [].concat.apply([], S.publico.preguntas.map(function (c, i) { return c.preguntas.map(function (q, j) { return { id: 'q' + i + j, activo: true, categoria: c.nombre, p: q.p, r: q.r, orden: j + 1 }; }); }))
+    });
+    if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js', function () { arrancarApp(); }); return; }
     arrancarApp();
   }
+
+  /* Lo que usan admin.js, reporte.js y chat.js */
+  var API = window.NM = {
+    S: S, C: C, DEMO: DEMO, db: function () { return db; }, auth: function () { return auth; },
+    esc: esc, ic: ic, bs: bs, numero: numero, titulo: titulo, vacio: vacio, aviso: aviso, ir: ir,
+    PAGINAS: PAGINAS, DESPUES: DESPUES, formatoAviso: formatoAviso, telVisible: telVisible,
+    aplicarContenido: aplicarContenido, vigente: vigente, idSeguro: idSeguro, cargarScript: cargarScript,
+    fechaTexto: fechaTexto, chipEstado: chipEstado,
+    previaAviso: function (a) { mostrarAviso([Object.assign({ previa: true, codigo: 'previa' }, a)], 0, {}); },
+    refrescar: function () { var p = S.pagina; arrancarApp(); ir(p, true); }
+  };
 
   iniciar();
 })();

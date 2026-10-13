@@ -101,3 +101,4 @@ export const MINIMO_REPARTIDORES = 0.6;
 export const USUARIOS_PRUEBA = [
   { id: '1234', celular: '78015123', nombre: 'USUARIO DE PRUEBA' }
 ];
+export const CORREO_ADMIN = 'admin@portalnummeros.app';

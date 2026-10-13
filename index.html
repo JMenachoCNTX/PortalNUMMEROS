@@ -368,6 +368,115 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .pie-version img{height:14px;width:auto;opacity:.6;display:block;margin:0 auto 6px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--verde-800);color:#fff;padding:10px 16px;border-radius:var(--r-md);font:600 14px var(--nm-display);z-index:3000;box-shadow:var(--nm-sombra-alta)}
 @media (max-width:860px){.toast{bottom:calc(92px + env(safe-area-inset-bottom))}}
+
+/* ══ v3.1 · Reporte, administrador y asistente ══ */
+.segmento{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.segmento button{border:1px solid var(--nm-borde-control);background:var(--nm-superficie);color:var(--nm-texto);border-radius:999px;padding:7px 14px;font:600 13px var(--nm-display);letter-spacing:.03em;cursor:pointer}
+.segmento button.on{background:var(--nm-boton);border-color:var(--nm-boton);color:var(--nm-sobre-boton)}
+.rep-kpis{grid-template-columns:1fr 1fr;align-content:start}
+.rep-kpis .nm-kpi,.adm-kpis div.nm-kpi{cursor:default}
+.adm-kpis{grid-template-columns:repeat(4,1fr);margin-bottom:14px}
+@media (max-width:860px){.adm-kpis{grid-template-columns:1fr 1fr}}
+.adm-rapidos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:480px){.adm-rapidos{grid-template-columns:1fr}}
+.btn.peligro{background:var(--nm-error);border-color:var(--nm-error);color:#fff}
+.icono{width:36px;height:36px;display:inline-grid;place-items:center;border-radius:10px;border:1px solid var(--nm-borde);background:var(--nm-superficie);color:var(--nm-texto);cursor:pointer}
+.icono:hover:not(:disabled){background:var(--nm-campo);border-color:var(--verde-300)}
+.icono:disabled{opacity:.35;cursor:default}
+.icono.peligro{color:var(--nm-error)}
+.icono .ic svg{width:18px;height:18px}
+.enlace{background:none;border:0;padding:0;color:var(--nm-acento);font:600 12.5px var(--nm-cuerpo);text-decoration:underline;cursor:pointer}
+.adm-lista{display:flex;flex-direction:column}
+.adm-item{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--nm-borde)}
+.adm-item:last-child{border-bottom:0;padding-bottom:0}
+.adm-item:first-child{padding-top:0}
+.adm-mini{flex:none;width:132px;aspect-ratio:16/7;border-radius:10px;overflow:hidden;background:var(--nm-campo);display:grid;place-items:center;border:1px solid var(--nm-borde)}
+.adm-mini img{width:100%;height:100%;object-fit:cover}
+.adm-mini span{font-size:12px;color:var(--nm-suave)}
+.adm-tipo{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--nm-ok-bg);color:var(--nm-ok)}
+.aviso-IMPORTANTE .adm-tipo{background:var(--nm-aviso-bg);color:var(--nm-aviso)}
+.aviso-URGENTE .adm-tipo{background:var(--nm-error-bg);color:var(--nm-error)}
+.adm-info{flex:1;min-width:0}
+.adm-info>b{display:block;font:600 16px/1.25 var(--nm-display);letter-spacing:.01em}
+.adm-extracto{font-size:13px;color:var(--nm-suave);margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.adm-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:7px;font-size:12.5px;color:var(--nm-suave)}
+.adm-acc{display:flex;gap:6px;flex:none}
+@media (max-width:640px){
+  .adm-item{flex-wrap:wrap}
+  .adm-mini{width:96px}
+  .adm-info{flex-basis:calc(100% - 112px)}
+  .adm-tipo+.adm-info{flex-basis:calc(100% - 56px)}
+  .adm-acc{width:100%;justify-content:flex-end}
+}
+.modal-caja.fm{max-width:560px}
+.fm .modal-cuerpo{padding-top:16px}
+.fm-campo{margin-bottom:14px}
+.fm-campo label{display:block;font:600 13px var(--nm-display);letter-spacing:.02em;margin-bottom:5px}
+.fm-campo input,.fm-campo select,.fm-campo textarea{width:100%;background:var(--nm-campo);border:1px solid var(--nm-borde-control);border-radius:var(--r-md);padding:10px 12px;font:15px/1.5 var(--nm-cuerpo);color:var(--nm-texto)}
+.fm-campo textarea{resize:vertical;min-height:70px}
+.fm-campo ::placeholder{color:var(--nm-suave);opacity:.6}
+.fm-campo small{display:block;margin-top:5px;font-size:12px;color:var(--nm-suave);line-height:1.45}
+.fm-campo small b{color:var(--nm-texto)}
+.fm-switch{display:flex;align-items:center;gap:10px;font:600 14px var(--nm-display);letter-spacing:.02em;margin:4px 0 12px;cursor:pointer}
+.fm-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.fm-switch span{width:42px;height:24px;border-radius:999px;background:var(--nm-borde-control);position:relative;transition:background .15s;flex:none}
+.fm-switch span:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s}
+.fm-switch input:checked+span{background:var(--nm-boton)}
+.fm-switch input:checked+span:after{transform:translateX(18px)}
+.fm-switch input:focus-visible+span{outline:2px solid var(--nm-acento);outline-offset:2px}
+.fm-imagen{border:1px dashed var(--nm-borde-control);border-radius:var(--r-md);padding:10px}
+.fm-img-previa{aspect-ratio:16/7;border-radius:8px;overflow:hidden;background:var(--nm-campo);display:grid;place-items:center;margin-bottom:10px}
+.fm-img-previa img{width:100%;height:100%;object-fit:contain}
+.fm-img-previa span{display:flex;align-items:center;gap:6px;color:var(--nm-suave);font-size:13px}
+.fm-img-acc{display:flex;gap:8px;flex-wrap:wrap}
+.fm-img-acc label.btn{margin:0;font:600 13px var(--nm-display);letter-spacing:.03em;color:var(--nm-sobre-boton)}
+.fm-img-link{margin-top:10px}
+.chat-registro{display:flex;flex-direction:column;gap:10px}
+.chat-registro article{border:1px solid var(--nm-borde);border-radius:12px;padding:12px 14px}
+.cr-cab{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--nm-suave);margin-bottom:6px}
+.cr-cab b{font:600 14px var(--nm-display);color:var(--nm-texto)}
+.cr-p{font-weight:600;margin-bottom:4px}
+.cr-r{color:var(--nm-suave);font-size:14px;white-space:pre-line}
+
+/* Asistente */
+.chat-btn{position:fixed;right:20px;bottom:20px;z-index:1200;display:flex;align-items:center;gap:8px;padding:12px 18px 12px 14px;border-radius:999px;border:0;background:var(--verde-900);color:#fff;font:600 15px var(--nm-display);letter-spacing:.04em;cursor:pointer;box-shadow:0 10px 26px rgba(5,31,32,.32)}
+.chat-btn:hover{background:var(--verde-800)}
+.chat-btn .ic svg{width:20px;height:20px}
+.chat-btn.on{display:none}
+body.dark-mode .chat-btn{background:var(--verde-300);color:var(--verde-950)}
+.chat-panel{position:fixed;right:20px;bottom:20px;z-index:1300;width:min(400px,calc(100vw - 32px));height:min(620px,calc(100vh - 40px));background:var(--nm-superficie);border-radius:20px;box-shadow:0 24px 60px rgba(5,31,32,.35);display:flex;flex-direction:column;overflow:hidden;animation:nmSube .25s cubic-bezier(.2,.8,.2,1);border:1px solid var(--nm-borde)}
+.chat-cab{position:relative;overflow:hidden;background:var(--verde-900);color:#fff;display:flex;align-items:center;gap:12px;padding:14px 16px}
+.chat-cab:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--verde-300)}
+.chat-cab .nm-patron{opacity:.5;-webkit-mask-image:linear-gradient(100deg,transparent 40%,#000);mask-image:linear-gradient(100deg,transparent 40%,#000)}
+.chat-cab img{position:relative;width:24px;height:32px}
+.chat-cab div:not(.nm-patron){position:relative;flex:1;min-width:0}
+.chat-cab b{display:block;font:700 18px var(--nm-display);letter-spacing:.02em}
+.chat-cab small{display:block;font-size:12px;color:var(--verde-100);opacity:.85}
+.chat-cab .modal-x{position:relative;flex:none}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--nm-fondo)}
+.msg{max-width:86%;padding:10px 14px;border-radius:16px;font-size:14.5px;line-height:1.55}
+.msg p{margin:0 0 8px}.msg p:last-child{margin:0}
+.msg ul{margin:0 0 8px;padding-left:18px}
+.msg.ia{align-self:flex-start;background:var(--nm-superficie);border:1px solid var(--nm-borde);border-bottom-left-radius:6px}
+.msg.ia strong{color:var(--verde-700)}
+body.dark-mode .msg.ia strong{color:var(--verde-100)}
+.msg.yo{align-self:flex-end;background:var(--nm-boton);color:var(--nm-sobre-boton);border-bottom-right-radius:6px}
+.msg.error{border-color:var(--nm-aviso-borde);background:var(--nm-aviso-bg);color:var(--nm-aviso)}
+.chat-sug{display:flex;flex-wrap:wrap;gap:6px}
+.chat-sug button{border:1px solid var(--nm-borde-control);background:var(--nm-superficie);color:var(--nm-texto);border-radius:999px;padding:7px 12px;font:13px var(--nm-cuerpo);cursor:pointer;text-align:left}
+.chat-sug button:hover{background:var(--nm-campo)}
+.escribiendo{display:flex;gap:5px;padding:14px 16px}
+.escribiendo span{width:7px;height:7px;border-radius:50%;background:var(--nm-suave);animation:nmPunto 1.2s infinite}
+.escribiendo span:nth-child(2){animation-delay:.15s}.escribiendo span:nth-child(3){animation-delay:.3s}
+@keyframes nmPunto{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.chat-form{display:flex;gap:8px;padding:12px;border-top:1px solid var(--nm-borde);background:var(--nm-superficie)}
+.chat-form input{flex:1;min-width:0;background:var(--nm-campo);border:1px solid var(--nm-borde-control);border-radius:999px;padding:10px 16px;font-size:15px;color:var(--nm-texto)}
+.chat-form .btn{border-radius:50%;width:44px;min-height:44px;padding:0;flex:none}
+@media (max-width:860px){
+  .chat-btn{bottom:calc(78px + env(safe-area-inset-bottom));right:14px;padding:11px 15px 11px 12px;font-size:14px}
+  .chat-panel{right:0;left:0;bottom:0;width:100%;height:calc(100% - 40px);height:calc(100dvh - 40px);border-radius:20px 20px 0 0}
+  .chat-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
@@ -379,11 +488,12 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js"></script>
+<script src="config.js?v=3.1"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js"></script>
+<script src="app.js?v=3.1"></script>
+<script src="chat.js?v=3.1"></script>
 </body>
 </html>

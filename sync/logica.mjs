@@ -116,7 +116,7 @@ export function armar(tablas, cfg, opciones = {}) {
     if (repartidores.has(idSeguro(id))) diag.duplicados.push('fila ' + fila);
     repartidores.set(idSeguro(id), {
       uid: idSeguro(id), id, nombre: texto(f[iNom]), celular: cel,
-      habilitado: true, poliza: false, pendientes: [], historial: [], tramites: [], avisos: []
+      habilitado: true, poliza: false, pendientes: [], historial: [], tramites: []
     });
   });
   const ej = a => a.length + (a.length ? ' (ej.: ' + a.slice(0, 12).join(', ') + ')' : '');
@@ -145,8 +145,7 @@ export function armar(tablas, cfg, opciones = {}) {
         numero: 'SOP-0001', clave: 'soporte', tipo: 'Soporte – Problemas con pagos', fecha: '08/10/2026 10:12:00', _o: ordenFecha('08/10/2026'),
         asunto: 'No me llegó el pago (ejemplo)', detalle: '001245', etAsunto: 'Problema', etDetalle: 'Nro de factura',
         estado: 'En revisión', resolucion: '', motivo: '', comentario: 'Esto es una prueba', fechaRespuesta: ''
-      }],
-      avisos: []
+      }]
     });
   }
 
@@ -201,54 +200,7 @@ export function armar(tablas, cfg, opciones = {}) {
     }
   }
 
-  /* 6) Avisos (ventanas emergentes) */
-  const avisosCfg = [];
-  const filasAvisos = tablas.avisos || [];
-  // Si la primera fila es de encabezados, las columnas se ubican por su nombre
-  const cabAv = filasAvisos.length && /activo/i.test(texto(filasAvisos[0][0])) ? filasAvisos[0].map(h => normalizar(h)) : null;
-  const colAv = (claves, porDefecto) => {
-    if (!cabAv) return porDefecto;
-    const i = cabAv.findIndex(h => claves.some(k => h.includes(k)));
-    return i;
-  };
-  const AV = cabAv ? {
-    titulo: colAv(['TITULO']), mensaje: cabAv.findIndex(h => h.includes('MENSAJE') && !h.includes('TITULO')),
-    imagen: colAv(['IMAGEN']), tipo: colAv(['TIPO']), frecuencia: colAv(['FRECUENCIA']), para: colAv(['PARA']),
-    desde: colAv(['DESDE']), hasta: colAv(['HASTA']),
-    boton: colAv(['BOTON']), link: cabAv.findIndex(h => h.includes('LINK'))
-  } : { titulo: 1, mensaje: 2, imagen: 3, tipo: 4, frecuencia: 5, para: 6, desde: 7, hasta: 8, boton: 9, link: 10 };
-  const celda = (f, i) => (i >= 0 ? f[i] : '');
-  for (const f of cabAv ? filasAvisos.slice(1) : filasAvisos) {
-    if (!esActivo(f[0])) continue;
-    let titulo = texto(celda(f, AV.titulo)), mensaje = texto(celda(f, AV.mensaje));
-    // Una sola columna "Título / Mensaje": la primera línea es el título
-    if (titulo && !mensaje && AV.mensaje < 0) {
-      const lineas = titulo.split(/\r?\n/);
-      const i = lineas.findIndex(l => l.trim());
-      titulo = lineas[i].trim(); mensaje = lineas.slice(i + 1).join('\n').trim();
-    }
-    titulo = sinEmojis(titulo).replace(/\*\*/g, '').trim();
-    mensaje = sinEmojis(mensaje);
-    if (!titulo && !mensaje) continue;
-    const desde = fechaISO(celda(f, AV.desde)), hasta = fechaISO(celda(f, AV.hasta));
-    if (desde && hoy < desde) continue;
-    if (hasta && hoy > hasta) continue;
-    let botonTexto = texto(celda(f, AV.boton)), botonLink = limpiarLink(celda(f, AV.link));
-    const url = botonTexto.match(/(https?:\/\/\S+|wa\.me\/\S+)/i);
-    if (url && !botonLink) { botonLink = limpiarLink(url[1]); botonTexto = botonTexto.replace(url[1], '').replace(/[|:\-–\s]+$/, '').trim(); }
-    if (botonLink && !botonTexto) botonTexto = 'Ver más';
-    avisosCfg.push({
-      codigo: codigoAviso(titulo, mensaje), titulo, mensaje,
-      imagen: imagen(celda(f, AV.imagen)),
-      tipo: normalizar(celda(f, AV.tipo)) || 'INFO', frecuencia: normalizar(celda(f, AV.frecuencia)) || 'UNA VEZ',
-      paraQuien: normalizar(celda(f, AV.para)) || 'TODOS',
-      botonTexto: botonLink ? botonTexto : '', botonLink
-    });
-  }
-  const peso = { URGENTE: 0, IMPORTANTE: 1, INFO: 2 };
-  avisosCfg.sort((a, b) => (peso[a.tipo] ?? 2) - (peso[b.tipo] ?? 2));
-
-  /* 7) Cierre de cada repartidor */
+  /* 6) Cierre de cada repartidor */
   for (const r of repartidores.values()) {
     r.historial.sort((a, b) => (b._o - a._o) || (b._n - a._n));
     r.historial.forEach(h => { delete h._o; delete h._n; });
@@ -259,61 +211,99 @@ export function armar(tablas, cfg, opciones = {}) {
       pendientes: { cantidad: r.pendientes.length, total: suma(r.pendientes) },
       pagados: { cantidad: r.historial.length, total: suma(r.historial) }
     };
-    for (const a of avisosCfg) {
-      let aplica;
-      switch (a.paraQuien) {
-        case 'TODOS': aplica = true; break;
-        case 'NO HABILITADOS': aplica = !r.habilitado; break;
-        case 'SIN POLIZA': aplica = !r.poliza; break;
-        case 'CON PENDIENTES': aplica = r.pendientes.length > 0; break;
-        default: aplica = a.paraQuien.split(/[,;\s]+/).some(x => idSeguro(x).toUpperCase() === r.uid.toUpperCase());
-      }
-      if (aplica) {
-        const { paraQuien, ...resto } = a;
-        r.avisos.push(resto);
-      }
-    }
   }
 
-  /* 8) Lo que ven todos (anuncios, preguntas, formularios, encuesta) */
-  const anuncios = [];
-  for (const f of tablas.anuncios || []) {
-    if (!esActivo(f[0])) continue;
-    const img = imagen(f[1]);
-    if (!img) continue;
-    const desde = fechaISO(f[4]), hasta = fechaISO(f[5]);
-    if (desde && hoy < desde) continue;
-    if (hasta && hoy > hasta) continue;
-    anuncios.push({ orden: numero(f[3]) ?? 999, imagen: img, link: limpiarLink(f[2]), titulo: texto(f[6]) });
-  }
-  anuncios.sort((a, b) => a.orden - b.orden);
-  anuncios.forEach(a => delete a.orden);
-
-  const cats = new Map();
-  for (const f of tablas.faq || []) {
-    if (!esActivo(f[0])) continue;
-    const p = texto(f[2]), resp = texto(f[3]);
-    if (!p || !resp) continue;
-    const c = texto(f[1]) || 'General';
-    if (!cats.has(c)) cats.set(c, []);
-    cats.get(c).push({ p, r: resp, o: numero(f[4]) ?? 999 });
-  }
-  const preguntas = [...cats.entries()].map(([nombre, l]) => ({
-    nombre, preguntas: l.sort((a, b) => a.o - b.o).map(({ p, r }) => ({ p, r }))
-  }));
-
+  /* 7) Lo que ven todos y sale de la configuración (formularios, encuesta).
+     Anuncios, avisos y preguntas ya NO salen de Google Sheets: se editan en el
+     panel de administrador del portal (documento publico/contenido). */
   const publico = {
-    anuncios,
-    preguntas,
     formularios: cfg.TRAMITES.filter(t => t.formulario).map(t => ({ clave: t.clave, nombre: t.nombre, descripcion: t.descripcion || '', url: t.formulario })),
-    encuesta: cfg.ENCUESTA && cfg.ENCUESTA.url ? { ...cfg.ENCUESTA } : null
+    encuesta: cfg.ENCUESTA && cfg.ENCUESTA.url ? { ...cfg.ENCUESTA } : null,
+    totalRepartidores: [...repartidores.values()].filter(r => !r.prueba).length
   };
 
   return { repartidores, publico, avisosLog };
 }
 
+/* ══════════ MIGRACIÓN ÚNICA desde el archivo CONTROL ══════════
+   Convierte las hojas Anuncios, Avisos y FAQ al formato del panel de
+   administrador. Se usa UNA sola vez (cuando publico/contenido no existe). */
+export function nuevoId() { return crypto.randomBytes(6).toString('hex'); }
+export function importarContenido(tablas) {
+  const anuncios = [];
+  for (const f of tablas.anuncios || []) {
+    const fuente = texto(f[1]);
+    if (!fuente) continue;
+    anuncios.push({
+      id: nuevoId(), activo: esActivo(f[0]), fuente, imagen: '', link: limpiarLink(f[2]),
+      orden: numero(f[3]) ?? 999, desde: fechaISO(f[4]), hasta: fechaISO(f[5]), titulo: texto(f[6])
+    });
+  }
+  anuncios.sort((a, b) => a.orden - b.orden);
+  anuncios.forEach((a, i) => { a.orden = i + 1; });
+
+  const avisos = [];
+  const filasAvisos = tablas.avisos || [];
+  // Si la primera fila es de encabezados, las columnas se ubican por su nombre
+  const cabAv = filasAvisos.length && /activo/i.test(texto(filasAvisos[0][0])) ? filasAvisos[0].map(h => normalizar(h)) : null;
+  const colAv = claves => cabAv.findIndex(h => claves.some(k => h.includes(k)));
+  const AV = cabAv ? {
+    titulo: colAv(['TITULO']), mensaje: cabAv.findIndex(h => h.includes('MENSAJE') && !h.includes('TITULO')),
+    imagen: colAv(['IMAGEN']), tipo: colAv(['TIPO']), frecuencia: colAv(['FRECUENCIA']), para: colAv(['PARA']),
+    desde: colAv(['DESDE']), hasta: colAv(['HASTA']),
+    boton: colAv(['BOTON']), link: cabAv.findIndex(h => h.includes('LINK'))
+  } : { titulo: 1, mensaje: 2, imagen: 3, tipo: 4, frecuencia: 5, para: 6, desde: 7, hasta: 8, boton: 9, link: 10 };
+  const celda = (f, i) => (i >= 0 ? f[i] : '');
+  for (const f of cabAv ? filasAvisos.slice(1) : filasAvisos) {
+    let titulo = texto(celda(f, AV.titulo)), mensaje = texto(celda(f, AV.mensaje));
+    // Una sola columna "Título / Mensaje": la primera línea es el título
+    if (titulo && !mensaje && AV.mensaje < 0) {
+      const lineas = titulo.split(/\r?\n/);
+      const i = lineas.findIndex(l => l.trim());
+      titulo = lineas[i].trim(); mensaje = lineas.slice(i + 1).join('\n').trim();
+    }
+    titulo = sinEmojis(titulo).replace(/\*\*/g, '').trim();
+    mensaje = sinEmojis(mensaje).trim();
+    if (!titulo && !mensaje) continue;
+    let botonTexto = texto(celda(f, AV.boton)), botonLink = limpiarLink(celda(f, AV.link));
+    const url = botonTexto.match(/(https?:\/\/\S+|wa\.me\/\S+)/i);
+    if (url && !botonLink) { botonLink = limpiarLink(url[1]); botonTexto = botonTexto.replace(url[1], '').replace(/[|:\-–\s]+$/, '').trim(); }
+    if (botonLink && !botonTexto) botonTexto = 'Ver más';
+    const para = normalizar(celda(f, AV.para)) || 'TODOS';
+    const grupos = ['TODOS', 'NO HABILITADOS', 'SIN POLIZA', 'CON PENDIENTES'];
+    avisos.push({
+      id: nuevoId(), codigo: codigoAviso(titulo, mensaje), activo: esActivo(f[0]), titulo, mensaje,
+      fuente: texto(celda(f, AV.imagen)), imagen: '',
+      tipo: ['INFO', 'IMPORTANTE', 'URGENTE'].includes(normalizar(celda(f, AV.tipo))) ? normalizar(celda(f, AV.tipo)) : 'INFO',
+      frecuencia: ['UNA VEZ', 'CADA INGRESO', 'HASTA QUE CONFIRME'].includes(normalizar(celda(f, AV.frecuencia))) ? normalizar(celda(f, AV.frecuencia)) : 'UNA VEZ',
+      paraQuien: grupos.includes(para) ? para : 'IDS', ids: grupos.includes(para) ? '' : texto(celda(f, AV.para)),
+      desde: fechaISO(celda(f, AV.desde)), hasta: fechaISO(celda(f, AV.hasta)),
+      botonTexto: botonLink ? botonTexto : '', botonLink
+    });
+  }
+
+  const preguntas = [];
+  for (const f of tablas.faq || []) {
+    const p = texto(f[2]), r = texto(f[3]);
+    if (!p) continue;
+    preguntas.push({ id: nuevoId(), activo: esActivo(f[0]), categoria: texto(f[1]) || 'General', p, r, orden: numero(f[4]) ?? 999 });
+  }
+  return { anuncios, avisos, preguntas };
+}
+
+/** ChatLog y AvisosLeidos viejos → listas para el archivo (solo lo ve el administrador) */
+export function importarArchivo(tablas) {
+  const chats = (tablas.chatlog || []).slice(1).filter(f => texto(f[3])).map(f => ({
+    fecha: texto(f[0]), id: texto(f[1]), nombre: texto(f[2]), pregunta: texto(f[3]).slice(0, 600), respuesta: texto(f[4]).slice(0, 1200), tokens: numero(f[5]) || 0
+  }));
+  const lecturas = (tablas.avisosLeidos || []).filter(f => texto(f[1]) && !/^fecha/i.test(texto(f[0]))).map(f => ({
+    fecha: texto(f[0]), id: texto(f[1]), nombre: texto(f[2]), codigo: texto(f[4]), titulo: texto(f[5]).slice(0, 200)
+  }));
+  return { chats, lecturas };
+}
+
 /** Datos que se guardan en Firestore para un repartidor (sin el celular en claro como ID) */
 export function documentoRepartidor(r) {
-  const { uid, ...doc } = r;
+  const { uid, avisos, ...doc } = r;
   return doc;
 }

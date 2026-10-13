@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.0',
+  version: '3.1',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -22,6 +22,14 @@ window.PORTAL = {
      IMPORTANTE: debe ser igual a sync/config.mjs. No lo cambies después
      de la primera sincronización. */
   dominioUsuarios: 'repartidores.portalnummeros.app',
+
+  /* Administrador: entra con el celular y el ID del usuario de prueba y,
+     ya adentro, el portal le pide la clave (secreto ADMIN_CLAVE en GitHub). */
+  accesoAdmin: '1234',
+  correoAdmin: 'admin@portalnummeros.app',
+
+  /* Asistente con IA (DeepSeek a través de Cloudflare). Vacío = apagado. */
+  ia: { url: '' },
 
   whatsappGeneral: '59169021969',   // consultas
   whatsappFacturas: '59175854243',  // solo recibe facturas en PDF

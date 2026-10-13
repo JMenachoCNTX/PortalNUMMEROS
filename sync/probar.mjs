@@ -2,7 +2,7 @@
    Uso:  cd sync && node probar.mjs */
 import assert from 'node:assert/strict';
 import * as CFG from './config.mjs';
-import { armar, correoDe, claveDe, limpiarCelular, numero, ordenFecha } from './logica.mjs';
+import { armar, correoDe, claveDe, limpiarCelular, numero, ordenFecha, importarContenido, importarArchivo, documentoRepartidor } from './logica.mjs';
 
 const tablas = {
   // A, B=ID, C=Nombre, D=Celular
@@ -73,12 +73,8 @@ assert.equal(juan.tramites[0].numero, 'SOP-0004');
 assert.equal(juan.tramites[0].asunto, 'No me llegó');
 assert.equal(juan.tramites[0].detalle, '001245');
 assert.equal(juan.tramites[0].fechaRespuesta, '09/10/2026');
-assert.deepEqual(juan.avisos.map(a => a.titulo), ['Feriado', 'Solo Juan']);
-assert.deepEqual(maria.avisos.map(a => a.titulo), ['Habilítate', 'Feriado'], 'Urgente primero');
-assert.equal(publico.anuncios.length, 2);
-assert.equal(publico.anuncios[0].titulo, 'Primero');
-assert.equal(publico.anuncios[1].link, 'https://wa.me/59169021969');
-assert.equal(publico.preguntas[0].preguntas[0].p, '¿Qué es pendiente?');
+assert.equal(documentoRepartidor(juan).avisos, undefined, 'Los avisos ya no van en el documento del repartidor');
+assert.equal(publico.totalRepartidores, 2);
 assert.equal(publico.formularios.length, 4);
 assert.equal(avisosLog.length, 1);
 
@@ -88,15 +84,33 @@ assert.equal(claveDe(limpiarCelular('70000001'), '27391057'), 'NM-59170000001-27
 assert.equal(numero('1.234,50'), 1234.5);
 assert.ok(ordenFecha('03/10/2026') > ordenFecha('26/09/2026'));
 
-// Hoja Avisos real: encabezados y una sola columna "Título / Mensaje"
-const real = armar({ ...tablas, avisos: [
-  ['Activo', 'Título / Mensaje', 'Imagen', 'Tipo', 'Frecuencia', 'Para quién', 'Desde', 'Hasta', 'Botón'],
-  ['SI', '**📢 COMUNICADO OFICIAL - SEMANA 40**\n\nEstimados Repartidores,\n\nEl portal **ya está actualizado**.', '', 'Importante', 'Cada Ingreso', 'Todos', '', '', 'Escríbenos https://wa.me/59169021969']
-] }, CFG, { hoy: '2026-10-13' });
-const av = real.repartidores.get('27391057').avisos[0];
+// Migración única: hojas Anuncios, Avisos (formato real) y FAQ → contenido del panel
+const cont = importarContenido({
+  anuncios: tablas.anuncios,
+  avisos: [
+    ['Activo', 'Título / Mensaje', 'Imagen', 'Tipo', 'Frecuencia', 'Para quién', 'Desde', 'Hasta', 'Botón'],
+    ['SI', '**📢 COMUNICADO OFICIAL - SEMANA 40**\n\nEstimados Repartidores,\n\nEl portal **ya está actualizado**.', '', 'Importante', 'Cada Ingreso', 'Todos', '', '', 'Escríbenos https://wa.me/59169021969'],
+    ['NO', 'Solo algunos\nHola', '', 'Info', 'Una vez', '27391057, 5555', '', '', '']
+  ],
+  faq: tablas.faq
+});
+assert.equal(cont.anuncios.length, 4, 'Se migran todos, también los apagados');
+assert.equal(cont.anuncios[0].titulo, 'Primero'); assert.equal(cont.anuncios[0].orden, 1);
+assert.equal(cont.anuncios.find(a => a.titulo === 'Apagado').activo, false);
+assert.equal(cont.anuncios.find(a => a.titulo === 'Segundo').fuente.includes('drive.google'), true);
+const av = cont.avisos[0];
 assert.equal(av.titulo, 'COMUNICADO OFICIAL - SEMANA 40');
 assert.equal(av.mensaje, 'Estimados Repartidores,\n\nEl portal **ya está actualizado**.');
-assert.equal(av.tipo, 'IMPORTANTE'); assert.equal(av.frecuencia, 'CADA INGRESO');
+assert.equal(av.tipo, 'IMPORTANTE'); assert.equal(av.frecuencia, 'CADA INGRESO'); assert.equal(av.paraQuien, 'TODOS');
 assert.equal(av.botonTexto, 'Escríbenos'); assert.equal(av.botonLink, 'https://wa.me/59169021969');
+assert.equal(cont.avisos[1].paraQuien, 'IDS'); assert.equal(cont.avisos[1].ids, '27391057, 5555'); assert.equal(cont.avisos[1].activo, false);
+assert.equal(cont.preguntas.length, 3);
+const arch = importarArchivo({
+  chatlog: [['Fecha y Hora', 'ID Yango', 'Nombre', 'Pregunta', 'Respuesta', 'Tokens'], ['23/9/2026 1:36:14', '31827409', 'Erick', '¿NIT?', 'Al 550276028', '1307']],
+  avisosLeidos: [['22/9/2026 12:00:06', '66314299', 'Cristhian', '59169181162', 'fb9176ceb5', 'Bienvenido']]
+});
+assert.equal(arch.chats.length, 1); assert.equal(arch.chats[0].tokens, 1307);
+assert.equal(arch.lecturas.length, 1); assert.equal(arch.lecturas[0].codigo, 'fb9176ceb5');
+assert.equal(arch.lecturas[0].celular, undefined, 'No se guarda el celular en el archivo');
 
 console.log('✔ Todas las pruebas pasaron (' + repartidores.size + ' repartidores de ejemplo).');

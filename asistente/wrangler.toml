@@ -1,0 +1,11 @@
+# Asistente con IA del Portal CONTAX (Cloudflare Worker gratuito).
+# Lo publica GitHub solo (.github/workflows/asistente.yml). No hace falta tocar nada aquí.
+name = "portal-nummeros-ia"
+main = "index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[vars]
+PROYECTO_FIREBASE = "portal-nummeros"
+ORIGENES = "https://portalnummeros.contaxbolivia.com,http://localhost:8765"
+MODELO = "deepseek-chat"

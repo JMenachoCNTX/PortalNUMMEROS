@@ -14,7 +14,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getSecurityRules } from 'firebase-admin/security-rules';
 import * as CFG from './config.mjs';
-import { armar, documentoRepartidor, correoDe, claveDe, huella, idDrive, texto } from './logica.mjs';
+import { armar, documentoRepartidor, correoDe, claveDe, huella, idDrive, texto, importarContenido, importarArchivo } from './logica.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..');
@@ -67,10 +67,6 @@ async function leerTodo() {
     hoja(H.login.nombre) + '!A2:D', hoja(H.pendientes.nombre) + '!A2:M', hoja(H.pagos.nombre) + '!A2:F',
     hoja(H.habilitados.nombre) + '!A2:A', hoja(H.asegurados.nombre) + '!A2:A'
   ]);
-  const [anuncios] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.anuncios.nombre) + '!A2:G'], { opcional: true });
-  const [avisos] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.avisos.nombre) + '!A1:N'], { opcional: true });
-  const [faq] = await leerRangos(CFG.FAQ_SPREADSHEET_ID || CFG.SPREADSHEET_ID, [hoja(H.faq.nombre) + '!A2:E'], { opcional: true });
-
   const tramites = {};
   for (const t of CFG.TRAMITES) {
     if (!t.archivoId) continue;
@@ -79,7 +75,102 @@ async function leerTodo() {
     tramites[t.clave] = filas;
   }
   log('BDYANGO: ' + login.length + ' filas · PPendientes: ' + pendientes.length + ' · Pagos: ' + pagos.length);
-  return { login, pendientes, pagos, habilitados, asegurados, anuncios, avisos, faq, tramites };
+  return { login, pendientes, pagos, habilitados, asegurados, tramites };
+}
+
+/* Migración única: las hojas Anuncios, Avisos, FAQ, ChatLog y AvisosLeidos del archivo
+   CONTROL pasan a Firebase. Después de esto, esas hojas ya no se usan y se pueden borrar. */
+async function leerMigracion() {
+  const H = CFG.HOJAS;
+  const opc = { opcional: true };
+  const [anuncios] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.anuncios.nombre) + '!A2:G'], opc);
+  const [avisos] = await leerRangos(CFG.SPREADSHEET_ID, [hoja(H.avisos.nombre) + '!A1:N'], opc);
+  const [faq] = await leerRangos(CFG.FAQ_SPREADSHEET_ID || CFG.SPREADSHEET_ID, [hoja(H.faq.nombre) + '!A2:E'], opc);
+  const [chatlog] = await leerRangos(CFG.SPREADSHEET_ID, ["'ChatLog'!A1:F"], opc);
+  const [avisosLeidos] = await leerRangos(CFG.SPREADSHEET_ID, ["'AvisosLeidos'!A1:F"], opc);
+  return { anuncios, avisos, faq, chatlog, avisosLeidos };
+}
+async function migrarSiHaceFalta() {
+  const ref = db.collection('publico').doc('contenido');
+  const snap = await ref.get();
+  if (snap.exists) return snap.data();
+  log('Primera vez: copiando Anuncios, Avisos, FAQ, ChatLog y AvisosLeidos a Firebase…');
+  const tablas = await leerMigracion();
+  const cont = importarContenido(tablas);
+  const arch = importarArchivo(tablas);
+  const lote = db.batch();
+  const trozos = (lista, n) => Array.from({ length: Math.ceil(lista.length / n) }, (_, i) => lista.slice(i * n, i * n + n));
+  trozos(arch.chats, 400).forEach((l, i) => lote.set(db.collection('archivo').doc('chats-' + (i + 1)), { tipo: 'chats', filas: l }));
+  trozos(arch.lecturas, 1500).forEach((l, i) => lote.set(db.collection('archivo').doc('lecturas-' + (i + 1)), { tipo: 'lecturas', filas: l }));
+  const datos = { ...cont, actualizado: FieldValue.serverTimestamp(), migrado: new Date().toISOString() };
+  lote.set(ref, datos);
+  await lote.commit();
+  console.log('::notice::Migración lista: ' + cont.anuncios.length + ' anuncios, ' + cont.avisos.length + ' avisos, ' + cont.preguntas.length +
+    ' preguntas, ' + arch.chats.length + ' chats y ' + arch.lecturas.length + ' lecturas viejas. Ya puedes borrar esas hojas de CONTROL.');
+  return { ...cont };
+}
+
+/* ── Cuenta de administrador (clave en el secreto ADMIN_CLAVE) ── */
+async function cuentaAdmin(estado) {
+  const clave = process.env.ADMIN_CLAVE || '';
+  if (!clave) { console.log('::notice::Falta el secreto ADMIN_CLAVE: el panel de administrador queda apagado.'); return; }
+  if (clave.length < 10) { console.log('::warning::ADMIN_CLAVE es muy corta (mínimo 10 caracteres). No se activó el administrador.'); return; }
+  const h = huella(['admin', clave, CFG.CORREO_ADMIN]);
+  if (estado.admin === h) return;
+  const datos = { email: CFG.CORREO_ADMIN, password: clave, displayName: 'Administrador', disabled: false };
+  try { await auth.updateUser('admin', datos); }
+  catch (e) { if (e.code !== 'auth/user-not-found') throw e; await auth.createUser({ uid: 'admin', ...datos }); }
+  await auth.setCustomUserClaims('admin', { admin: true });
+  estado.admin = h;
+  log('Cuenta de administrador lista.');
+}
+
+/* ── Imágenes de anuncios y avisos: Drive o subidas desde el panel → carpeta anuncios/ ── */
+const subidasYaPublicadas = [];
+async function resolverImagen(fuente) {
+  const t = texto(fuente);
+  if (!t) return '';
+  const m = t.match(/^subida:([a-zA-Z0-9_-]+)$/);
+  if (!m) return rutaImagen(t);
+  const id = m[1];
+  fs.mkdirSync(CARPETA_IMG, { recursive: true });
+  const existente = fs.readdirSync(CARPETA_IMG).find(f => f.startsWith(id + '.'));
+  if (existente) { usadas.add(existente); subidasYaPublicadas.push(id); return 'anuncios/' + existente; }
+  const doc = await db.collection('imagenes').doc(id).get();
+  if (!doc.exists) { log('  Imagen subida ' + id + ' no encontrada'); return ''; }
+  const { datos, tipo } = doc.data();
+  const ext = { 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[tipo] || 'jpg';
+  const archivo = id + '.' + ext;
+  fs.writeFileSync(path.join(CARPETA_IMG, archivo), Buffer.from(String(datos).replace(/^data:[^,]+,/, ''), 'base64'));
+  usadas.add(archivo);
+  log('  Imagen subida desde el panel: ' + archivo);
+  return 'anuncios/' + archivo;
+}
+async function procesarImagenes(contenido) {
+  const items = [...(contenido.anuncios || []), ...(contenido.avisos || [])];
+  const rutas = new Map();
+  for (const it of items) rutas.set(it.id, await resolverImagen(it.fuente));
+  await descargarImagenes();
+  for (const [id, r] of rutas) if (renombradas.has(r)) rutas.set(id, renombradas.get(r));
+  // Guarda la ruta final solo si cambió (una transacción, por si el administrador guardó algo mientras tanto)
+  const ref = db.collection('publico').doc('contenido');
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return;
+    const c = snap.data();
+    let cambio = false;
+    for (const lista of ['anuncios', 'avisos']) {
+      for (const it of c[lista] || []) {
+        const r = rutas.get(it.id);
+        if (r === undefined) continue;
+        const final = it.fuente ? r : '';
+        if ((it.imagen || '') !== final) { it.imagen = final; cambio = true; }
+      }
+    }
+    if (cambio) { tx.update(ref, { anuncios: c.anuncios || [], avisos: c.avisos || [] }); log('Rutas de imágenes actualizadas.'); }
+  });
+  // Las imágenes subidas que ya quedaron en GitHub se borran de Firebase (ahorra espacio)
+  for (const id of subidasYaPublicadas) await db.collection('imagenes').doc(id).delete().catch(() => {});
 }
 
 /* ── 3. Imágenes de Drive → carpeta anuncios/ del sitio ── */
@@ -173,9 +264,11 @@ async function principal() {
   const estado = Object.assign({ cuentas: {}, datos: {}, publico: '', reglas: '', total: 0 }, snap.exists ? snap.data() : {});
 
   await publicarReglas(estado);
+  await cuentaAdmin(estado);
+  const contenido = await migrarSiHaceFalta();
 
   const tablas = await leerTodo();
-  const { repartidores, publico, avisosLog } = armar(tablas, CFG, { imagen: rutaImagen });
+  const { repartidores, publico, avisosLog } = armar(tablas, CFG);
   avisosLog.forEach(a => console.log('::warning::' + a));
   log('Repartidores válidos: ' + repartidores.size);
 
@@ -184,12 +277,7 @@ async function principal() {
       '. Por seguridad no se cambió nada. Revisa la hoja; si el cambio es correcto, borra el documento privado/estado en Firestore.');
   }
 
-  await descargarImagenes();
-  if (renombradas.size) {
-    const corregir = o => { let t = JSON.stringify(o); for (const [a, b] of renombradas) t = t.split(a).join(b); return JSON.parse(t); };
-    Object.assign(publico, corregir(publico));
-    for (const r of repartidores.values()) if (r.avisos.length) r.avisos = corregir(r.avisos);
-  }
+  await procesarImagenes(contenido);
   await sincronizarCuentas(repartidores, estado);
 
   // Datos de cada repartidor: solo se escriben los que cambiaron
