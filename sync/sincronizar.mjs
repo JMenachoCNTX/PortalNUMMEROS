@@ -50,7 +50,9 @@ async function leerRangos(archivo, rangos, { opcional = false } = {}) {
   if (!res.ok) {
     const txt = await res.text();
     if (opcional) { log('  (no se pudo leer ' + rangos.join(', ') + ': ' + res.status + ')'); return rangos.map(() => []); }
-    if (res.status === 403) throw new Error('Sin permiso para leer el archivo ' + archivo + '. Compártelo como LECTOR con ' + cuenta.client_email);
+    if (res.status === 403 && /SERVICE_DISABLED|has not been used|is disabled/i.test(txt))
+      throw new Error('La API de Google Sheets no está activada en el proyecto ' + cuenta.project_id + '. Actívala aquí: https://console.cloud.google.com/apis/library/sheets.googleapis.com?project=' + cuenta.project_id + ' (espera 2 minutos y vuelve a correr).');
+    if (res.status === 403) throw new Error('Sin permiso para leer el archivo ' + archivo + '. Compártelo como LECTOR con ' + cuenta.client_email + ' · Detalle: ' + txt.replace(/\s+/g, ' ').slice(0, 300));
     throw new Error('Error leyendo ' + rangos.join(', ') + ' (' + res.status + '): ' + txt.slice(0, 300));
   }
   const j = await res.json();
