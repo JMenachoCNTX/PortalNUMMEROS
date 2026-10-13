@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.1',
+  version: '3.2',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -29,7 +29,7 @@ window.PORTAL = {
   correoAdmin: 'admin@portalnummeros.app',
 
   /* Asistente con IA (DeepSeek a través de Cloudflare). Vacío = apagado. */
-  ia: { url: '' },
+  ia: { url: 'https://portal-nummeros-ia.jhonnymenacho04.workers.dev' },
 
   whatsappGeneral: '59169021969',   // consultas
   whatsappFacturas: '59175854243',  // solo recibe facturas en PDF
