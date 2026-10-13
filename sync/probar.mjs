@@ -58,7 +58,9 @@ const { repartidores, publico, avisosLog } = armar(tablas, CFG, {
   imagen: v => (String(v).includes('drive.google') ? 'anuncios/1AbCdEfGhIjKlMnOp.jpg' : String(v || '').trim())
 });
 
-assert.equal(repartidores.size, 2, 'Deben quedar 2 repartidores válidos');
+assert.equal(repartidores.size, 3, 'Deben quedar 2 repartidores válidos + 1 de prueba');
+const prueba = repartidores.get('1234');
+assert.equal(prueba.celular, '59178015123'); assert.equal(prueba.resumen.pendientes.cantidad, 2);
 const juan = repartidores.get('27391057'), maria = repartidores.get('11112222');
 assert.equal(maria.celular, '59170000002');
 assert.equal(juan.poliza, true); assert.equal(maria.habilitado, false); assert.equal(juan.habilitado, true);

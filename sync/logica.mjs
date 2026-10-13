@@ -124,6 +124,32 @@ export function armar(tablas, cfg, opciones = {}) {
     ' · vacías: ' + diag.vacias + ' · sin ID: ' + diag.sinId + ' · sin celular: ' + diag.sinCel +
     ' · celular no válido: ' + ej(diag.celMalo) + ' · ID repetido: ' + ej(diag.duplicados));
 
+  /* 1b) Usuarios de prueba (no están en BDYANGO) */
+  for (const u of cfg.USUARIOS_PRUEBA || []) {
+    const cel = limpiarCelular(u.celular), id = texto(u.id);
+    if (!id || !/^591\d{8}$/.test(cel) || repartidores.has(idSeguro(id))) continue;
+    repartidores.set(idSeguro(id), {
+      uid: idSeguro(id), id, nombre: u.nombre || 'USUARIO DE PRUEBA', celular: cel, prueba: true,
+      habilitado: true, poliza: true,
+      pendientes: [
+        { semana: '41', rango: '05/10 al 11/10', importe: 415.2, estado: 'Pendiente' },
+        { semana: '40', rango: '28/09 al 04/10', importe: 512.8, estado: 'Factura recibida' }
+      ],
+      historial: [
+        { fechaPago: '03/10/2026', semana: '39', rango: '21/09 al 27/09', importe: 486, _o: ordenFecha('03/10/2026'), _n: 4 },
+        { fechaPago: '26/09/2026', semana: '38', rango: '14/09 al 20/09', importe: 538.4, _o: ordenFecha('26/09/2026'), _n: 3 },
+        { fechaPago: '19/09/2026', semana: '37', rango: '07/09 al 13/09', importe: 402.1, _o: ordenFecha('19/09/2026'), _n: 2 },
+        { fechaPago: '12/09/2026', semana: '36', rango: '31/08 al 06/09', importe: 455.75, _o: ordenFecha('12/09/2026'), _n: 1 }
+      ],
+      tramites: [{
+        numero: 'SOP-0001', clave: 'soporte', tipo: 'Soporte – Problemas con pagos', fecha: '08/10/2026 10:12:00', _o: ordenFecha('08/10/2026'),
+        asunto: 'No me llegó el pago (ejemplo)', detalle: '001245', etAsunto: 'Problema', etDetalle: 'Nro de factura',
+        estado: 'En revisión', resolucion: '', motivo: '', comentario: 'Esto es una prueba', fechaRespuesta: ''
+      }],
+      avisos: []
+    });
+  }
+
   /* 2) Habilitados / Asegurados (el ID en la columna A) */
   for (const f of tablas.habilitados || []) { const r = repartidores.get(idSeguro(f[0])); if (r && texto(f[0])) r.habilitado = false; }
   for (const f of tablas.asegurados || []) { const r = repartidores.get(idSeguro(f[0])); if (r && texto(f[0])) r.poliza = true; }

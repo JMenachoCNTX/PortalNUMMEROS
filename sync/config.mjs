@@ -95,3 +95,9 @@ export const TRAMITES = [
 // Seguridad: si BDYANGO trae menos de este porcentaje de los repartidores de la vez anterior,
 // la sincronización se detiene (para no borrar a todos si la hoja se vacía por error).
 export const MINIMO_REPARTIDORES = 0.6;
+
+/* Usuarios de prueba: NO están en BDYANGO. Entran al portal con datos de ejemplo.
+   Para quitarlos, borra la línea y espera la siguiente sincronización. */
+export const USUARIOS_PRUEBA = [
+  { id: '1234', celular: '78015123', nombre: 'USUARIO DE PRUEBA' }
+];
