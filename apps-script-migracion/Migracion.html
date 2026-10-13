@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<title>Portal CONTAX · Nos mudamos a NUMMEROS</title>
+<style>
+@font-face{font-family:'Akshar';font-weight:600;font-display:swap;src:url(https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/fuentes/Akshar-600.woff2) format('woff2')}
+@font-face{font-family:'Akshar';font-weight:700;font-display:swap;src:url(https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/fuentes/Akshar-700.woff2) format('woff2')}
+@font-face{font-family:'Questrial';font-weight:400;font-display:swap;src:url(https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/fuentes/Questrial-400.woff2) format('woff2')}
+:root{--v950:#051F20;--v900:#0B2B26;--v800:#163832;--v700:#235347;--v300:#8EB69B;--v100:#DAF1DE;
+  --fondo:#F4FAF5;--borde:#DAF1DE;--suave:#557363;
+  --display:'Akshar','Arial Narrow',sans-serif;--cuerpo:'Century Gothic','Questrial','Avenir Next',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--fondo);color:var(--v800);font:16px/1.55 var(--cuerpo);-webkit-font-smoothing:antialiased}
+.nm-patron{position:absolute;inset:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Cg%3E%3Crect width='96' height='96' fill='%23F4FAF5'/%3E%3Crect x='96' y='96' width='96' height='96' fill='%23F4FAF5'/%3E%3Crect x='96' width='96' height='96' fill='%23ECF6EE'/%3E%3Crect y='96' width='96' height='96' fill='%23ECF6EE'/%3E%3C/g%3E%3Cg fill='%23E4F2E7'%3E%3Cpath transform='translate(29 19) scale(.0796)' d='M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z'/%3E%3Cpath transform='translate(125 115) scale(.0796)' d='M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z'/%3E%3C/g%3E%3Cg fill='%23DAF1DE'%3E%3Cpath transform='translate(125 19) scale(.0796)' d='M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z'/%3E%3Cpath transform='translate(29 115) scale(.0796)' d='M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z'/%3E%3C/g%3E%3C/svg%3E");background-size:192px 192px;opacity:.9;-webkit-mask-image:radial-gradient(ellipse at 50% 50%,transparent 28%,#000 78%);mask-image:radial-gradient(ellipse at 50% 50%,transparent 28%,#000 78%)}
+.pantalla{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+.panel{position:relative;display:flex;flex-direction:column;justify-content:center;padding:48px clamp(24px,6vw,88px);overflow:hidden}
+.panel .nm-patron{-webkit-mask-image:linear-gradient(100deg,transparent 35%,#000 100%);mask-image:linear-gradient(100deg,transparent 35%,#000 100%);opacity:.75}
+.contenido{position:relative;max-width:560px;animation:subir .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes subir{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.logo{height:34px;width:auto;display:block;margin-bottom:44px}
+.etiqueta{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--borde);border-radius:999px;padding:5px 14px 5px 6px;font:600 13px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--v700);margin-bottom:22px}
+.etiqueta i{width:22px;height:22px;border-radius:50%;background:var(--v700);display:grid;place-items:center}
+.etiqueta i img{width:8px;height:auto}
+h1{font:700 clamp(40px,5.4vw,72px)/.98 var(--display);letter-spacing:.005em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--v700);display:block}
+.texto{margin-top:20px;font-size:17px;color:var(--suave);max-width:46ch}
+.texto b{color:var(--v800);font-weight:400}
+.ruta{margin-top:30px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.antes,.ahora{font:600 14px var(--display);letter-spacing:.03em;border-radius:10px;padding:8px 12px;border:1px solid var(--borde)}
+.antes{color:var(--suave);background:transparent;text-decoration:line-through;text-decoration-color:var(--v300)}
+.ahora{color:var(--v800);background:var(--v100);border-color:var(--v300)}
+.flecha{width:28px;height:2px;background:var(--v300);position:relative}
+.flecha:after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:7px solid var(--v300);border-right:0}
+.boton{margin-top:32px;display:inline-flex;align-items:center;gap:14px;background:var(--v700);color:#fff;text-decoration:none;border-radius:12px;padding:17px 26px 17px 28px;font:600 20px var(--display);letter-spacing:.03em;box-shadow:0 10px 26px rgba(35,83,71,.28);transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.boton:hover{background:var(--v800);transform:translateY(-2px);box-shadow:0 14px 32px rgba(35,83,71,.32)}
+.boton:focus-visible{outline:3px solid var(--v300);outline-offset:3px}
+.boton svg{width:22px;height:22px;transition:transform .15s ease}
+.boton:hover svg{transform:translateX(3px)}
+.nota{margin-top:16px;font-size:14px;color:var(--suave)}
+.pie{position:relative;margin-top:56px;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--suave)}
+.pie img{height:22px;width:auto}
+.pie span{border-left:1px solid var(--borde);padding-left:14px}
+.foto{position:relative;margin:0;overflow:hidden;background:#E9F3EC}
+.foto img.estatua{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:55% 25%;animation:acercar 18s ease-out both}
+@keyframes acercar{from{transform:scale(1.06)}to{transform:scale(1)}}
+.foto:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,31,32,0) 55%,rgba(5,31,32,.35) 100%)}
+.foto figcaption{position:absolute;z-index:1;left:28px;right:28px;bottom:28px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.insignia{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.94);color:var(--v800);border-radius:999px;padding:7px 16px 7px 8px;font:700 18px var(--display);letter-spacing:.04em;box-shadow:0 6px 18px rgba(5,31,32,.14)}
+.insignia i{width:26px;height:26px;border-radius:50%;background:var(--v700);display:grid;place-items:center}
+.insignia i img{width:10px;height:auto}
+.insignia span{font:400 12px var(--cuerpo);color:var(--suave);letter-spacing:0}
+.frase{background:rgba(5,31,32,.8);color:var(--v100);border-radius:10px;padding:10px 14px;font-size:14px;max-width:340px;backdrop-filter:blur(4px)}
+@media (prefers-reduced-motion:reduce){.contenido,.foto img.estatua{animation:none}}
+@media (max-width:860px){
+  .pantalla{grid-template-columns:1fr}
+  .foto{order:-1;height:260px}
+  .foto figcaption{left:16px;bottom:16px}
+  .frase{display:none}
+  .panel{padding:30px 22px 40px;justify-content:flex-start}
+  .logo{height:28px;margin-bottom:28px}
+  .texto{font-size:16px}
+  .boton{width:100%;justify-content:center}
+  .pie{margin-top:36px}
+}
+</style>
+</head>
+<body>
+<main class="pantalla">
+  <section class="panel">
+    <div class="nm-patron" aria-hidden="true"></div>
+    <div class="contenido">
+      <img class="logo" src="https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/logos/nummeros-logotipo-horizontal-principal.svg" alt="NUMMEROS">
+      <span class="etiqueta"><i><img src="https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/logos/nummeros-isotipo-blanco.svg" alt=""></i>Nos mudamos</span>
+      <h1>El Portal CONTAX <em>tiene casa nueva.</em></h1>
+      <p class="texto">Ahora <b>NUMMEROS</b>, la empresa que hace todos los sistemas de CONTAX, se encarga de tu portal. Es más rápido, más claro y funciona mejor en el celular. Entras con <b>el mismo celular y el mismo ID de Yango</b> de siempre.</p>
+      <div class="ruta" aria-label="Dirección anterior y nueva">
+        <span class="antes">Link de Google</span><span class="flecha" aria-hidden="true"></span><span class="ahora">portalnummeros.contaxbolivia.com</span>
+      </div>
+      <a class="boton" href="https://portalnummeros.contaxbolivia.com" target="_top" rel="noopener">Ir al nuevo portal
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+      <p class="nota">Ya en el nuevo portal, guárdalo en tu pantalla de inicio para tenerlo siempre a mano.</p>
+      <div class="pie"><img src="https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/logos/nummeros-logotipo-firma-principal.svg" alt="NUMMEROS by CONTAX"><span>Santa Cruz de la Sierra, Bolivia</span></div>
+    </div>
+  </section>
+  <figure class="foto">
+    <img class="estatua" src="https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/clasicos/pitagoras-celular.jpg" alt="Escultura griega de Pitágoras revisando un celular">
+    <figcaption>
+      <div class="insignia"><i><img src="https://cdn.jsdelivr.net/gh/JMenachoCNTX/PortalNUMMEROS@main/marca/logos/nummeros-isotipo-blanco.svg" alt=""></i>Pitágoras<span>Los números del día a día</span></div>
+      <div class="frase">Tus pagos, facturas y trámites, ahora desde NUMMEROS.</div>
+    </figcaption>
+  </figure>
+</main>
+</body>
+</html>
