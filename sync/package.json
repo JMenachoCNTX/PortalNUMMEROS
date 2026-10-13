@@ -1,0 +1,12 @@
+{
+  "name": "portal-nummeros-sync",
+  "private": true,
+  "type": "module",
+  "description": "Sincroniza Google Sheets con Firebase para el Portal CONTAX",
+  "scripts": { "sincronizar": "node sincronizar.mjs", "probar": "node probar.mjs" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "google-auth-library": "^9.15.0"
+  }
+}

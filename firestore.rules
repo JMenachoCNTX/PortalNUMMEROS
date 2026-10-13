@@ -1,0 +1,31 @@
+rules_version = '2';
+// Reglas de seguridad del Portal CONTAX.
+// Cada repartidor solo puede leer SUS datos. Nadie puede escribir desde la página,
+// salvo marcar que leyó un aviso. Los datos los escribe la sincronización (servidor).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /repartidores/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+
+      match /lecturas/{codigo} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['fecha', 'titulo'])
+          && request.resource.data.titulo is string
+          && request.resource.data.titulo.size() <= 200;
+      }
+    }
+
+    match /publico/{doc} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Todo lo demás (por ejemplo privado/estado) queda cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

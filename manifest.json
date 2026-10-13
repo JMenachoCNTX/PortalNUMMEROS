@@ -1,0 +1,16 @@
+{
+  "name": "Portal CONTAX · NUMMEROS",
+  "short_name": "Portal CONTAX",
+  "description": "Tus pagos, facturas y trámites con CONTAX.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4FAF5",
+  "theme_color": "#F4FAF5",
+  "lang": "es",
+  "icons": [
+    { "src": "marca/iconos/icono-app-principal-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "marca/iconos/icono-app-principal-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "marca/iconos/icono-app-principal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
