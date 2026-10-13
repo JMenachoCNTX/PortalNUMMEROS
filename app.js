@@ -289,7 +289,7 @@
               '<input id="idy" type="password" autocomplete="current-password" placeholder="Tu ID de Yango" required></div>' +
             '<div class="nm-login-err" id="errLogin" role="alert">' + esc(error || '') + '</div>' +
             '<button class="nm-login-btn" id="btnEntrar" type="submit">Ingresar</button>' +
-            '<p class="nm-login-ayuda">¿Problemas para entrar? <a href="' + wa(C.whatsappGeneral, 'Hola, no puedo entrar al Portal CONTAX.') + '" target="_blank" rel="noopener">Escríbenos por WhatsApp</a></p>' +
+            '<p class="nm-login-ayuda"><button type="button" class="enlace" data-accion="sinid">No sé mi ID de Yango</button> · <a href="' + wa(C.whatsappGeneral, 'Hola, no puedo entrar al Portal CONTAX.') + '" target="_blank" rel="noopener">Otro problema para entrar</a></p>' +
           '</form>' +
           '<div class="nm-login-pie"><span class="nm-login-ver">Portal CONTAX · v' + esc(C.version) + (DEMO ? ' · demostración' : '') + '</span>' +
             '<span>NUMMEROS by CONTAX · Santa Cruz de la Sierra, Bolivia</span>' +
@@ -942,6 +942,11 @@
     else if (acc === 'cerrarMas') cerrarMas();
     else if (acc === 'recargar') location.reload();
     else if (acc === 'pdf') descargarPDF(a);
+    else if (acc === 'sinid') {
+      var celSinId = limpiarCelular((document.getElementById('cel') || {}).value || '');
+      var txtSinId = 'Hola CONTAX, no recuerdo mi ID de Yango para entrar al Portal CONTAX.' + (/^591\d{8}$/.test(celSinId) ? ' Mi celular registrado es ' + telVisible(celSinId) + '.' : '') + ' Mi nombre completo es: ';
+      window.open(wa(C.whatsappGeneral, txtSinId), '_blank', 'noopener');
+    }
     else if (acc === 'instalar' && eventoInstalar) { eventoInstalar.prompt(); eventoInstalar = null; }
     else if (acc === 'tema') {
       S.oscuro = !S.oscuro; guardar('nm_oscuro', S.oscuro ? '1' : '0'); aplicarTema(); cerrarMas();
