@@ -102,15 +102,26 @@ export function armar(tablas, cfg, opciones = {}) {
   const repartidores = new Map();
   // Todas las tablas se leen desde la columna A, así la letra coincide con la posición
   const iId = columna(H.login.id), iNom = columna(H.login.nombreCol), iCel = columna(H.login.celular);
-  for (const f of tablas.login || []) {
+  const diag = { vacias: 0, sinId: 0, sinCel: 0, celMalo: [], duplicados: [] };
+  (tablas.login || []).forEach((f, n) => {
+    const fila = n + 2;
     const id = texto(f[iId]);
-    const cel = limpiarCelular(f[iCel]);
-    if (!id || !/^591\d{8}$/.test(cel)) continue;
+    const crudo = String(f[iCel] ?? '').trim();
+    const cel = limpiarCelular(crudo);
+    if (!id && !crudo && !texto(f[iNom])) { diag.vacias++; return; }
+    if (!id) { diag.sinId++; return; }
+    if (!crudo) { diag.sinCel++; return; }
+    if (!/^591\d{8}$/.test(cel)) { diag.celMalo.push('fila ' + fila + ' (' + cel.length + ' dígitos)'); return; }
+    if (repartidores.has(idSeguro(id))) diag.duplicados.push('fila ' + fila);
     repartidores.set(idSeguro(id), {
       uid: idSeguro(id), id, nombre: texto(f[iNom]), celular: cel,
       habilitado: true, poliza: false, pendientes: [], historial: [], tramites: [], avisos: []
     });
-  }
+  });
+  const ej = a => a.length + (a.length ? ' (ej.: ' + a.slice(0, 12).join(', ') + ')' : '');
+  avisosLog.push('BDYANGO · filas leídas: ' + (tablas.login || []).length + ' · válidos: ' + repartidores.size +
+    ' · vacías: ' + diag.vacias + ' · sin ID: ' + diag.sinId + ' · sin celular: ' + diag.sinCel +
+    ' · celular no válido: ' + ej(diag.celMalo) + ' · ID repetido: ' + ej(diag.duplicados));
 
   /* 2) Habilitados / Asegurados (el ID en la columna A) */
   for (const f of tablas.habilitados || []) { const r = repartidores.get(idSeguro(f[0])); if (r && texto(f[0])) r.habilitado = false; }

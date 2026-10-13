@@ -78,7 +78,7 @@ assert.equal(publico.anuncios[0].titulo, 'Primero');
 assert.equal(publico.anuncios[1].link, 'https://wa.me/59169021969');
 assert.equal(publico.preguntas[0].preguntas[0].p, '¿Qué es pendiente?');
 assert.equal(publico.formularios.length, 4);
-assert.equal(avisosLog.length, 0);
+assert.equal(avisosLog.length, 1);
 
 // La página y la sincronización arman igual el usuario y la clave
 assert.equal(correoDe('27391057', CFG.DOMINIO_USUARIOS), '27391057@repartidores.portalnummeros.app');
