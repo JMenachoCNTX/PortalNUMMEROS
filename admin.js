@@ -544,7 +544,8 @@
       case 'borrar-pregunta': confirmar('¿Borrar esta pregunta?', function () { contenido().preguntas = lista('preguntas').filter(function (x) { return x.id !== id; }); guardar('preguntas', 'Pregunta borrada').then(refrescar); }); break;
       case 'vista': registros.vista = id; refrescar(); break;
       case 'bajar-registros':
-        var v = registros.vista, l = filtrar(registros[v] || []);
+        var v = registros.vista, l = filtrar(registros[v] || []), listo = N.anilloBoton(b, 'Descargando');
+        setTimeout(listo, 0);
         if (v === 'archivoLecturas') bajarCSV([['Fecha', 'ID Yango', 'Nombre', 'Aviso']].concat(l.map(function (x) { return [textoFecha(x.fecha), x.id, x.nombre, x.titulo]; })), 'lecturas-anteriores');
         else bajarCSV([['Fecha', 'ID Yango', 'Nombre', 'Pregunta', 'Respuesta', 'Tokens']].concat(l.map(function (x) { return [textoFecha(x.fecha), x.id, x.nombre, x.pregunta, x.respuesta, x.tokens]; })), v === 'chats' ? 'chats-asistente' : 'chats-anteriores');
         break;

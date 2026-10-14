@@ -919,13 +919,26 @@
       '</div>';
   };
 
+  /* Botón ocupado: anillo que gira con la N al centro y el texto "Descargando" (mínimo 2 segundos) */
+  function anilloBoton(btn, texto) {
+    var original = btn.innerHTML;
+    btn.disabled = true; btn.classList.add('ocupado');
+    btn.innerHTML = '<span class="nm-anillo nm-anillo-chico"><svg class="nm-giro" viewBox="0 0 36 36" aria-hidden="true">' +
+      '<circle class="nm-pista" cx="18" cy="18" r="15.9"></circle><circle class="nm-arco" cx="18" cy="18" r="15.9"></circle></svg>' +
+      '<span class="nm-n-centro"><svg viewBox="0 0 546 728" aria-hidden="true"><path d="' + N_PATH + '"></path></svg></span></span>' + esc(texto || 'Descargando');
+    var desde = Date.now();
+    return function listo() {
+      setTimeout(function () { btn.disabled = false; btn.classList.remove('ocupado'); btn.innerHTML = original; }, Math.max(0, 2000 - (Date.now() - desde)));
+    };
+  }
   function descargarPDF(btn) {
     var R = datosReporte(S.periodo || 'todo');
-    var txt = btn.innerHTML;
-    btn.disabled = true; btn.textContent = 'Preparando PDF…';
-    function listo() { btn.disabled = false; btn.innerHTML = txt; }
+    var listo = anilloBoton(btn, 'Descargando'), desde = Date.now();
     function generar() {
-      window.NM_PDF.generar(R, API).then(listo, function (e) { console.error(e); listo(); aviso('No se pudo generar el PDF. Intenta de nuevo.'); });
+      // La animación dura al menos 2 segundos antes de bajar el archivo
+      setTimeout(function () {
+        window.NM_PDF.generar(R, API).then(listo, function (e) { console.error(e); listo(); aviso('No se pudo generar el PDF. Intenta de nuevo.'); });
+      }, Math.max(0, 1700 - (Date.now() - desde)));
     }
     if (window.NM_PDF) generar(); else cargarScript('reporte.js?v=' + C.version, generar);
   }
@@ -1140,7 +1153,7 @@
     esc: esc, ic: ic, bs: bs, numero: numero, titulo: titulo, vacio: vacio, aviso: aviso, ir: ir,
     PAGINAS: PAGINAS, DESPUES: DESPUES, formatoAviso: formatoAviso, telVisible: telVisible,
     aplicarContenido: aplicarContenido, vigente: vigente, idSeguro: idSeguro, cargarScript: cargarScript,
-    fechaTexto: fechaTexto, chipEstado: chipEstado,
+    fechaTexto: fechaTexto, chipEstado: chipEstado, anilloBoton: anilloBoton,
     previaAviso: function (a) { mostrarAviso([Object.assign({ previa: true, codigo: 'previa' }, a)], 0, {}); },
     refrescar: function () { var p = S.pagina; arrancarApp(); ir(p, true); }
   };

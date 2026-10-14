@@ -466,6 +466,21 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .tut-txt b{font:600 17px/1.25 var(--nm-display)}
 .tut-txt p{font-size:13.5px}
 
+/* Anillo de descarga */
+.nm-anillo{position:relative;display:inline-grid;place-items:center;width:44px;height:44px;flex:none}
+.nm-anillo-chico{width:1.35em;height:1.35em}
+.nm-giro{position:absolute;inset:0;width:100%;height:100%;animation:nmGiro 1s linear infinite}
+.nm-pista{fill:none;stroke:currentColor;stroke-width:3.2;opacity:.25}
+.nm-arco{fill:none;stroke:currentColor;stroke-width:3.2;stroke-linecap:round;stroke-dasharray:28 72;stroke-dashoffset:0;transform-origin:50% 50%}
+.nm-n-centro{position:relative;display:grid;place-items:center;width:44%;height:52%}
+.nm-n-centro svg{width:100%;height:100%;fill:currentColor}
+.nm-anillo-chico .nm-n-centro{width:40%;height:48%}
+.nm-mini{display:inline-flex;align-items:center;gap:10px;color:var(--nm-acento);font:600 15px var(--nm-display)}
+.btn.ocupado{opacity:1;cursor:progress}
+.btn.ocupado .nm-anillo{margin-right:2px}
+@keyframes nmGiro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.nm-giro{animation-duration:3s}}
+
 /* Cifras que giran */
 .nm-cifra{display:inline-flex;align-items:flex-start;overflow:hidden}
 .nm-rod{display:inline-block;height:1.1em;line-height:1.1em;overflow:hidden;vertical-align:top}
@@ -544,13 +559,13 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.5"></script>
+<script src="config.js?v=3.6"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.5"></script>
-<script src="chat.js?v=3.5"></script>
-<script src="notificaciones.js?v=3.5"></script>
+<script src="app.js?v=3.6"></script>
+<script src="chat.js?v=3.6"></script>
+<script src="notificaciones.js?v=3.6"></script>
 </body>
 </html>
