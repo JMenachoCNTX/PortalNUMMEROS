@@ -61,3 +61,17 @@ jobs:
           URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' salida.txt | head -1)
           printf '%s' "$DEEPSEEK_API_KEY" | npx --yes wrangler@3 secret put DEEPSEEK_API_KEY > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo guardar la clave de DeepSeek"; exit 1; }
           echo "::notice::Asistente publicado en $URL"
+
+      - name: Probar el asistente de punta a punta
+        if: always() && steps.sec.outputs.listo == 'si'
+        run: |
+          URL="https://portal-nummeros-ia.jhonnymenacho04.workers.dev"
+          KEY=$(grep -oE "AIza[A-Za-z0-9_-]{35}" config.js | head -1)
+          echo "::notice::GET: $(curl -s -m 20 -o /dev/null -w '%{http_code}' $URL) · $(curl -s -m 20 $URL | head -c 200)"
+          echo "::notice::CORS: $(curl -s -m 20 -i -X OPTIONS -H 'Origin: https://portalnummeros.contaxbolivia.com' -H 'Access-Control-Request-Method: POST' $URL | grep -i -E '^HTTP|access-control-allow-origin' | tr '\r\n' '  ')"
+          TOK=$(curl -s -m 20 -X POST "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$KEY" -H 'Content-Type: application/json' \
+            -d '{"email":"1234@repartidores.portalnummeros.app","password":"NM-59178015123-1234","returnSecureToken":true}' | grep -oE '"idToken": *"[^"]+"' | sed 's/.*"\([^"]*\)"$/\1/')
+          [ -z "$TOK" ] && { echo "::warning::No se pudo iniciar sesión con el usuario de prueba para probar."; exit 0; }
+          R=$(curl -s -m 60 -w ' [%{http_code}]' -X POST $URL -H 'Origin: https://portalnummeros.contaxbolivia.com' -H "Authorization: Bearer $TOK" -H 'Content-Type: application/json' \
+            -d '{"mensajes":[{"rol":"usuario","texto":"Hola, ¿cuánto tengo por cobrar?"}],"contexto":"DATOS DEL REPARTIDOR\nPagos pendientes: semana 41 Bs 415,20"}')
+          echo "::notice::Prueba real: $(echo "$R" | head -c 600)"

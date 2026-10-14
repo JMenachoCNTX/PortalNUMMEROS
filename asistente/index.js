@@ -80,6 +80,16 @@ function respuesta(cuerpo, estado, cab) {
 
 export default {
   async fetch(req, env) {
+    try { return await atender(req, env); }
+    catch (e) {
+      console.log('Error', e && e.stack || e);
+      return respuesta({ error: 'El asistente tuvo un problema. Intenta de nuevo en un momento.' }, 500, cors(req.headers.get('Origin') || '', env));
+    }
+  }
+};
+
+async function atender(req, env) {
+  {
     const cab = cors(req.headers.get('Origin') || '', env);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cab });
     if (req.method === 'GET') return respuesta({ ok: true, servicio: 'Asistente Portal CONTAX' }, 200, cab);
@@ -117,4 +127,4 @@ export default {
     const texto = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').trim();
     return respuesta({ respuesta: texto || 'No pude responder eso. Escríbenos al WhatsApp 69021969.', tokens: (j.usage && j.usage.total_tokens) || 0 }, 200, cab);
   }
-};
+}
