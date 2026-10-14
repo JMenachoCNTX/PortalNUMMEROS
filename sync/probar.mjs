@@ -114,3 +114,22 @@ assert.equal(arch.lecturas.length, 1); assert.equal(arch.lecturas[0].codigo, 'fb
 assert.equal(arch.lecturas[0].celular, undefined, 'No se guarda el celular en el archivo');
 
 console.log('✔ Todas las pruebas pasaron (' + repartidores.size + ' repartidores de ejemplo).');
+
+// Notificaciones
+{
+  const { firmaNotif, eventosNotif, unirEventos, aplicaA, bsTexto } = await import('./logica.mjs');
+  const r = { uid: '1', pendientes: [{ semana: '41', importe: 415.2 }], historial: [{ semana: '38', importe: 486, fechaPago: '03/10/2026' }], tramites: [{ numero: 'SOP-1', estado: 'En revisión' }] };
+  const a = firmaNotif(r);
+  assert.deepEqual(eventosNotif(null, a, r), [], 'La primera vez no avisa');
+  const r2 = { ...r, pendientes: [{ semana: '42', importe: 512.8 }, ...r.pendientes], historial: [{ semana: '39', importe: 400, fechaPago: '10/10/2026' }, ...r.historial], tramites: [{ numero: 'SOP-1', estado: 'Resuelto', resolucion: 'APROBADA' }] };
+  const ev = eventosNotif(a, firmaNotif(r2), r2);
+  assert.equal(ev.length, 3);
+  assert.equal(ev[0].titulo, 'Semana 42 registrada'); assert.ok(ev[0].cuerpo.includes('Bs 512,80'));
+  assert.equal(ev[1].titulo, 'Recibiste tu pago'); assert.ok(ev[1].cuerpo.includes('Semana 39'));
+  assert.ok(ev[2].cuerpo.includes('Resuelto · APROBADA'));
+  assert.equal(unirEventos(ev).titulo, 'Tienes novedades en el Portal CONTAX');
+  assert.equal(eventosNotif(firmaNotif(r2), firmaNotif(r2), r2).length, 0, 'Sin cambios no avisa');
+  assert.equal(aplicaA('IDS', '5, 1', r), true); assert.equal(aplicaA('SIN POLIZA', '', { poliza: true }), false);
+  assert.equal(bsTexto(1234.5), 'Bs 1.234,50');
+  console.log('✔ Notificaciones: pruebas pasaron.');
+}

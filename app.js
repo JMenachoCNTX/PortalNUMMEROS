@@ -62,6 +62,7 @@
     abajo: '<path d="m6 9 6 6 6-6"/>',
     ojo: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     subir: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
+    campana: '<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     copiar: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
     enviar: '<path d="M4 12 20 4l-6 16-3-7z"/>',
     whatsapp: '<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5 5 16.2a8.5 8.5 0 1 1 15.5-4.6z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2.2-1-1 .9a5 5 0 0 1-2.6-2.6l.9-1-1-2.2z"/>'
@@ -348,6 +349,7 @@
     { id: 'tramites', t: 'Mis trámites', i: 'tramites' },
     { id: 'preguntas', t: 'Preguntas', i: 'preguntas' },
     { id: 'contacto', t: 'Contacto', i: 'contacto' },
+    { id: 'notificaciones', t: 'Notificaciones', i: 'campana' },
     { id: 'instalar', t: 'Instalar en el celular', i: 'instalar' }
   ];
   var TABS = [
@@ -397,6 +399,7 @@
     if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js?v=' + C.version, function () { ir(PAGINAS[h] ? h : 'admin', true); }); }
     ir(PAGINAS[h] ? h : 'inicio', true);
     if (window.NM_CHAT && ((C.ia && C.ia.url) || DEMO)) window.NM_CHAT.montar();
+    if (window.NM_NOTIF) setTimeout(window.NM_NOTIF.renovar, 2500);
     if (S.datos.id === C.accesoAdmin && !S.admin && !S.adminPreguntado && !DEMO) { S.adminPreguntado = true; setTimeout(preguntarAdmin, 300); return; }
     if (!S.avisosVistos && !S.admin) { S.avisosVistos = true; setTimeout(mostrarAvisos, 500); }
   }
@@ -450,7 +453,7 @@
       return '<button class="nav-link' + (S.pagina === m.id ? ' active' : '') + '" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span>' + c + '</button>';
     }).join('') +
       '<div class="nav-pie"><img src="marca/logos/nummeros-logotipo-firma-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS by CONTAX">Portal CONTAX · v' + esc(C.version) + '</div>';
-    var enMas = ['reporte', 'preguntas', 'contacto', 'instalar'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
+    var enMas = ['reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
     document.getElementById('tabbar').innerHTML = TABS.map(function (t) {
       var on = t.id === S.pagina || (t.id === 'mas' && enMas);
       return '<button class="' + (on ? 'on' : '') + '" ' + (t.id === 'mas' ? 'data-accion="mas"' : 'data-ir="' + t.id + '"') + '><i>' + ic(t.i) + '</i>' + t.t + '</button>';
@@ -532,6 +535,7 @@
         '<figure class="nm-inicio-foto"><img src="marca/clasicos/' + (S.oscuro ? 'arquimedes-eureka' : 'pitagoras-celular') + '.jpg" alt="Escultura griega revisando un celular">' +
           '<figcaption>' + insignia(S.oscuro ? FOTOS_OSCURO[1] : FOTOS[3]) + '<div class="nm-frase">' + (S.oscuro ? FOTOS_OSCURO[1] : FOTOS[3]).frase + '</div></figcaption></figure>' +
       '</div>' +
+      (window.NM_NOTIF ? window.NM_NOTIF.tarjeta() : '') +
       '<div id="carrusel"></div>' +
       '<div class="grid2">' +
         '<div class="card"><div class="h2">Póliza de seguro</div>' + tarjetaPoliza() + '</div>' +
@@ -819,7 +823,7 @@
     var h = document.createElement('div');
     h.className = 'hoja-mas'; h.id = 'hojaMas';
     h.innerHTML = '<div class="fondo" data-accion="cerrarMas"></div><div class="hoja" role="dialog" aria-label="Más opciones"><div class="agarre"></div>' +
-      [['reporte', 'Reporte', 'resumen'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
+      [['reporte', 'Reporte', 'resumen'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
         return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span></button>';
       }).join('') +
       (S.admin ? '<span class="nav-sec">Administración</span>' + MENU_ADMIN.slice(1).map(function (m) {

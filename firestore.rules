@@ -49,6 +49,20 @@ service cloud.firestore {
       allow read: if esAdmin();
     }
 
+    // Celular donde cada repartidor recibe notificaciones (un dispositivo por persona)
+    match /notificaciones/{uid} {
+      allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
+      allow create, update: if conSesion() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['tokens', 'plataforma', 'actualizado'])
+        && request.resource.data.tokens is list && request.resource.data.tokens.size() <= 3;
+      allow delete: if conSesion() && request.auth.uid == uid;
+    }
+
+    // Notificaciones que manda el administrador (el robot las envía)
+    match /colaNotif/{id} {
+      allow read, create: if esAdmin();
+    }
+
     // Lo que venía de las hojas viejas (ChatLog, AvisosLeidos)
     match /archivo/{doc} {
       allow read: if esAdmin();

@@ -307,3 +307,62 @@ export function documentoRepartidor(r) {
   const { uid, avisos, ...doc } = r;
   return doc;
 }
+
+/* ══════════ NOTIFICACIONES ══════════
+   Se guarda una "firma" corta de cada repartidor. Si en la siguiente
+   sincronización cambió, se arma el aviso para su celular. */
+export function bsTexto(n) {
+  const v = Number(n) || 0, p = Math.abs(v).toFixed(2).split('.');
+  return (v < 0 ? '−' : '') + 'Bs ' + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1];
+}
+export function firmaNotif(r) {
+  return {
+    p: (r.pendientes || []).map(x => String(x.semana)),
+    h: (r.historial || []).length,
+    t: (r.tramites || []).slice(0, 6).map(t => t.numero + '=' + (t.estado || '') + '|' + (t.resolucion || ''))
+  };
+}
+export function eventosNotif(antes, ahora, r) {
+  if (!antes) return [];
+  const ev = [];
+  const nuevas = ahora.p.filter(s => !antes.p.includes(s));
+  if (nuevas.length) {
+    const items = (r.pendientes || []).filter(x => nuevas.includes(String(x.semana)));
+    const total = items.reduce((s, x) => s + (Number(x.importe) || 0), 0);
+    ev.push(nuevas.length === 1
+      ? { titulo: 'Semana ' + nuevas[0] + ' registrada', cuerpo: 'Tienes ' + bsTexto(total) + ' por cobrar. Envía tu factura hasta el jueves a las 18:00.', link: 'pendientes' }
+      : { titulo: nuevas.length + ' semanas nuevas por cobrar', cuerpo: 'Total ' + bsTexto(total) + '. Envía tus facturas hasta el jueves a las 18:00.', link: 'pendientes' });
+  }
+  if (ahora.h > antes.h) {
+    const pagos = (r.historial || []).slice(0, ahora.h - antes.h);
+    const total = pagos.reduce((s, x) => s + (Number(x.importe) || 0), 0);
+    ev.push(pagos.length === 1
+      ? { titulo: 'Recibiste tu pago', cuerpo: 'Semana ' + pagos[0].semana + ': ' + bsTexto(pagos[0].importe) + (pagos[0].fechaPago ? ', pagado el ' + pagos[0].fechaPago : '') + '.', link: 'historial' }
+      : { titulo: 'Recibiste ' + pagos.length + ' pagos', cuerpo: 'Total ' + bsTexto(total) + '.', link: 'historial' });
+  }
+  const previo = Object.fromEntries((antes.t || []).map(x => [x.split('=')[0], x]));
+  for (const x of ahora.t) {
+    const num = x.split('=')[0];
+    if (previo[num] && previo[num] !== x) {
+      const [estado, res] = x.slice(num.length + 1).split('|');
+      ev.push({ titulo: 'Tu trámite ' + num + ' cambió', cuerpo: 'Estado: ' + (estado || 'Recibido') + (res ? ' · ' + res : '') + '. Toca para ver la respuesta.', link: 'tramites' });
+    }
+  }
+  return ev;
+}
+/** Junta varios eventos en una sola notificación */
+export function unirEventos(ev) {
+  if (!ev.length) return null;
+  if (ev.length === 1) return ev[0];
+  return { titulo: 'Tienes novedades en el Portal CONTAX', cuerpo: ev.map(e => e.titulo).join(' · ') + '.', link: ev[0].link };
+}
+/** ¿A quién le llega un aviso del administrador? */
+export function aplicaA(paraQuien, ids, r) {
+  switch (paraQuien) {
+    case 'NO HABILITADOS': return r.habilitado === false;
+    case 'SIN POLIZA': return !r.poliza;
+    case 'CON PENDIENTES': return (r.pendientes || []).length > 0;
+    case 'IDS': return String(ids || '').split(/[,;\s]+/).some(x => x && idSeguro(x).toUpperCase() === r.uid.toUpperCase());
+    default: return true;
+  }
+}

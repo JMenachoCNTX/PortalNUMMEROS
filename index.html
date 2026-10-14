@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
+<script>if(location.protocol==='http:'&&/contaxbolivia\.com$/.test(location.hostname))location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Portal CONTAX · NUMMEROS</title>
@@ -439,6 +440,14 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .cr-p{font-weight:600;margin-bottom:4px}
 .cr-r{color:var(--nm-suave);font-size:14px;white-space:pre-line}
 
+/* Notificaciones */
+.notif-card{display:flex;align-items:center;gap:14px;background:var(--nm-superficie);border:1px solid var(--nm-borde);border-left:4px solid var(--verde-300);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px}
+.notif-ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--nm-ok-bg);color:var(--nm-ok)}
+.notif-txt{flex:1;font-size:14px;color:var(--nm-suave)}
+.notif-txt b{display:block;font:600 16px var(--nm-display);color:var(--nm-texto);margin-bottom:2px}
+.notif-acc{display:flex;gap:8px;flex:none}
+@media (max-width:640px){.notif-card{flex-wrap:wrap}.notif-txt{flex-basis:calc(100% - 60px)}.notif-acc{width:100%}.notif-acc .btn{flex:1}}
+
 /* Asistente */
 .chat-btn{position:fixed;right:20px;bottom:20px;z-index:1200;display:flex;align-items:center;gap:8px;padding:12px 18px 12px 14px;border-radius:999px;border:0;background:var(--verde-900);color:#fff;font:600 15px var(--nm-display);letter-spacing:.04em;cursor:pointer;box-shadow:0 10px 26px rgba(5,31,32,.32)}
 .chat-btn:hover{background:var(--verde-800)}
@@ -489,12 +498,13 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.2"></script>
+<script src="config.js?v=3.3"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.2"></script>
-<script src="chat.js?v=3.2"></script>
+<script src="app.js?v=3.3"></script>
+<script src="chat.js?v=3.3"></script>
+<script src="notificaciones.js?v=3.3"></script>
 </body>
 </html>

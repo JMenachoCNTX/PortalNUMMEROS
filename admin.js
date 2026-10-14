@@ -203,6 +203,40 @@
   }
   function refrescar() { N.ir(S.pagina, true); }
 
+  /* ══════════ NOTIFICACIONES DEL ADMINISTRADOR ══════════ */
+  function textoPlano(t) { return String(t || '').replace(/\*\*/g, '').replace(/\s*\n+\s*/g, ' ').trim(); }
+  function encolarNotif(n) {
+    if (N.DEMO) { N.aviso('Demostración: la notificación no se envió.'); return Promise.resolve(); }
+    return N.db().collection('colaNotif').add({
+      titulo: String(n.titulo || '').slice(0, 80), cuerpo: String(n.cuerpo || '').slice(0, 240), paraQuien: n.paraQuien || 'TODOS', ids: n.ids || '',
+      link: n.link || 'inicio', estado: 'pendiente', creado: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function () { notifs = null; N.aviso('Notificación en cola: sale en los próximos 15 minutos.'); });
+  }
+  var CAMPOS_NOTIF = [
+    { k: 'titulo', t: 'Título', max: 80, obligatorio: true, ph: 'Semana 42 cargada' },
+    { k: 'cuerpo', t: 'Mensaje', tipo: 'textarea', filas: 3, max: 240, obligatorio: true, ph: 'Ya puedes ver tus pagos pendientes. Envía tu factura hasta el jueves 18:00.' },
+    { k: 'paraQuien', t: 'Para quién', tipo: 'select', opciones: PARA },
+    { k: 'ids', t: 'IDs de Yango', tipo: 'textarea', filas: 2, ayuda: 'Separados por coma.', si: function (v) { return v.paraQuien === 'IDS'; }, obligatorio: true },
+    { k: 'link', t: 'Al tocarla, abrir', tipo: 'select', opciones: [['inicio', 'Inicio'], ['pendientes', 'Pendientes'], ['historial', 'Historial'], ['tramites', 'Mis trámites'], ['reporte', 'Reporte']] }
+  ];
+  function nuevaNotif() {
+    abrirFormulario('Enviar notificación', CAMPOS_NOTIF, { paraQuien: 'TODOS', link: 'inicio' }, function (v) {
+      return encolarNotif(v).then(refrescar);
+    });
+  }
+  var notifs = null, suscritos = null;
+  function cargarNotifs() {
+    if (N.DEMO) { notifs = [{ titulo: 'Semana 41 cargada', estado: 'enviado', enviados: 812, creado: new Date() }]; suscritos = 1240; return Promise.resolve(); }
+    var db = N.db(), q = db.collection('notificaciones');
+    return Promise.all([
+      db.collection('colaNotif').orderBy('creado', 'desc').limit(5).get(),
+      q.count ? q.count().get().then(function (r) { return r.data().count; }) : Promise.resolve(null)
+    ]).then(function (r) {
+      notifs = []; r[0].forEach(function (d) { var x = d.data(); x.creado = x.creado && x.creado.toDate ? x.creado.toDate() : null; notifs.push(x); });
+      suscritos = r[1];
+    });
+  }
+
   /* ══════════ PANEL (inicio del administrador) ══════════ */
   P.admin = function () {
     var c = contenido(), pub = S.publico || {};
@@ -221,7 +255,16 @@
           '<button class="btn sec" data-adm="nuevo-anuncio">' + ic('imagen') + 'Nuevo anuncio</button>' +
           '<button class="btn sec" data-adm="nueva-pregunta">' + ic('preguntas') + 'Nueva pregunta</button>' +
           '<button class="btn sec" data-ir="admin-registros">' + ic('chat') + 'Ver chats y lecturas</button>' +
+          '<button class="btn sec" data-adm="nueva-notif">' + ic('campana') + 'Enviar notificación</button>' +
         '</div></div>' +
+        '<div class="card"><div class="h2">Notificaciones al celular <small>' + (suscritos == null ? '' : suscritos + ' celulares activados') + '</small></div>' +
+          (notifs == null ? N.vacio('Cargando…') : notifs.length ? '<div class="adm-lista">' + notifs.map(function (n) {
+            return '<article class="adm-item"><div class="adm-info"><b>' + esc(n.titulo) + '</b><div class="adm-meta">' +
+              (n.estado === 'enviado' ? '<span class="chip ok">Enviada a ' + (n.enviados || 0) + '</span>' : '<span class="chip pend">En cola</span>') +
+              '<span>' + esc(nombreDe(PARA, n.paraQuien)) + '</span>' + (n.creado ? '<span>' + n.creado.toLocaleString('es-BO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</span>' : '') +
+              '</div></div></article>';
+          }).join('') + '</div>' : N.vacio('Todavía no enviaste notificaciones', 'Los repartidores también reciben avisos automáticos: semana nueva, pago recibido y cambios en trámites.')) +
+        '</div>' +
         '<div class="card"><div class="h2">Cómo funciona</div><ul class="reglas">' +
           '<li>' + N.ic('reloj') + '<span>Los <b>avisos y preguntas</b> se ven al instante en el portal.</span></li>' +
           '<li>' + N.ic('imagen') + '<span>Las <b>imágenes nuevas</b> tardan unos 15 minutos: el robot las publica en GitHub.</span></li>' +
@@ -230,6 +273,8 @@
         '</ul></div>' +
       '</div>';
   };
+
+  D.admin = function () { if (notifs == null) cargarNotifs().then(function () { if (S.pagina === 'admin') refrescar(); }, function (e) { console.error(e); notifs = []; }); };
 
   /* ══════════ ANUNCIOS (carrusel del inicio) ══════════ */
   var CAMPOS_ANUNCIO = [
@@ -297,6 +342,8 @@
     var campos = CAMPOS_AVISO.slice();
     if (!nuevo) campos.push({ k: 'repetir', t: 'Volver a mostrarlo a quienes ya lo leyeron', tipo: 'switch' });
     if (!nuevo) it.repetir = false;
+    campos.push({ k: 'push', t: 'Enviar también como notificación al celular', tipo: 'switch' });
+    it.push = false;
     recargar().then(function () {
       abrirFormulario(nuevo ? 'Nuevo aviso' : 'Editar aviso', campos, it, function (v) {
         if (v.botonLink && !/^https?:\/\//i.test(v.botonLink)) v.botonLink = 'https://' + v.botonLink;
@@ -304,9 +351,12 @@
         if (v.paraQuien !== 'IDS') v.ids = '';
         if (v.repetir) { v.codigo = nuevoId(); delete lecturasCache[it.codigo]; }
         delete v.repetir;
+        var push = v.push; delete v.push;
         var l = lista('avisos'), i = l.findIndex(function (x) { return x.id === v.id; });
         if (i >= 0) l[i] = v; else l.unshift(v);
-        return guardar('avisos', nuevo ? 'Aviso creado' : 'Aviso guardado').then(refrescar);
+        return guardar('avisos', nuevo ? 'Aviso creado' : 'Aviso guardado').then(function () {
+          if (push) return encolarNotif({ titulo: v.titulo, cuerpo: textoPlano(v.mensaje).slice(0, 220), paraQuien: v.paraQuien, ids: v.ids, link: 'inicio' });
+        }).then(refrescar);
       }, { t: ic('ojo') + 'Vista previa', fn: previaDe });
     });
   }
@@ -479,6 +529,7 @@
       case 'alternar-anuncio': var a = buscar('anuncios', id); a.activo = a.activo === false; guardar('anuncios', a.activo ? 'Anuncio publicado' : 'Anuncio apagado').then(refrescar); break;
       case 'borrar-anuncio': confirmar('¿Borrar este anuncio?', function () { contenido().anuncios = lista('anuncios').filter(function (x) { return x.id !== id; }); guardar('anuncios', 'Anuncio borrado').then(refrescar); }); break;
       case 'nuevo-aviso': editarAviso(); break;
+      case 'nueva-notif': nuevaNotif(); break;
       case 'editar-aviso': editarAviso(buscar('avisos', id)); break;
       case 'copiar-aviso': editarAviso(buscar('avisos', id), true); break;
       case 'previa-aviso': previaDe(buscar('avisos', id)); break;

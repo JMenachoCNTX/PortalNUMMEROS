@@ -13,8 +13,9 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getSecurityRules } from 'firebase-admin/security-rules';
+import { getMessaging } from 'firebase-admin/messaging';
 import * as CFG from './config.mjs';
-import { armar, documentoRepartidor, correoDe, claveDe, huella, idDrive, texto, importarContenido, importarArchivo } from './logica.mjs';
+import { armar, documentoRepartidor, correoDe, claveDe, huella, idDrive, texto, importarContenido, importarArchivo, firmaNotif, eventosNotif, unirEventos, aplicaA } from './logica.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..');
@@ -257,6 +258,93 @@ async function publicarReglas(estado) {
   }
 }
 
+/* ── 6. Notificaciones al celular ── */
+const PORTAL = 'https://portalnummeros.contaxbolivia.com';
+const SHARDS = 4;
+const shard = uid => [...uid].reduce((a, c) => a + c.charCodeAt(0), 0) % SHARDS;
+function mensaje(token, m) {
+  return {
+    token,
+    notification: { title: m.titulo.slice(0, 80), body: m.cuerpo.slice(0, 240) },
+    webpush: {
+      notification: { icon: PORTAL + '/marca/iconos/icono-app-principal-192.png', badge: PORTAL + '/marca/iconos/icono-app-principal-192.png', lang: 'es' },
+      fcmOptions: { link: PORTAL + '/#/' + (m.link || 'inicio') }
+    }
+  };
+}
+/** Envía [{uid, token, m}] y quita los tokens que ya no sirven */
+async function enviar(lista) {
+  let ok = 0, mal = 0;
+  const malos = new Set();
+  for (let i = 0; i < lista.length; i += 500) {
+    const parte = lista.slice(i, i + 500);
+    try {
+      const r = await getMessaging().sendEach(parte.map(x => mensaje(x.token, x.m)));
+      r.responses.forEach((res, j) => {
+        if (res.success) ok++;
+        else {
+          mal++;
+          const c = res.error && res.error.code || '';
+          if (/registration-token-not-registered|invalid-registration-token|invalid-argument/.test(c)) malos.add(parte[j].uid);
+          else if (mal < 4) log('  Notificación no enviada: ' + c + ' ' + (res.error && res.error.message));
+        }
+      });
+    } catch (e) { mal += parte.length; console.log('::warning::No se pudieron enviar notificaciones: ' + e.message); break; }
+  }
+  for (const uid of malos) await db.collection('notificaciones').doc(uid).delete().catch(() => {});
+  return { ok, mal };
+}
+async function tokensDe(uids) {
+  const res = new Map();
+  for (let i = 0; i < uids.length; i += 300) {
+    const docs = await db.getAll(...uids.slice(i, i + 300).map(u => db.collection('notificaciones').doc(u)));
+    docs.forEach(d => { if (d.exists && (d.data().tokens || [])[0]) res.set(d.id, d.data().tokens[0]); });
+  }
+  return res;
+}
+async function notificar(repartidores) {
+  // a) Cambios de cada repartidor (semana nueva, pago, trámite)
+  const refs = Array.from({ length: SHARDS }, (_, i) => db.collection('privado').doc('notif-' + i));
+  const snaps = await db.getAll(...refs);
+  const primeraVez = snaps.every(d => !d.exists);
+  const firmas = snaps.map(d => (d.exists ? d.data().firmas || {} : {}));
+  const cambiados = new Set(), mensajes = new Map();
+  for (const r of repartidores.values()) {
+    if (r.prueba) continue;
+    const k = shard(r.uid), f = firmaNotif(r), antes = firmas[k][r.uid];
+    if (antes && JSON.stringify(antes) === JSON.stringify(f)) continue;
+    const m = unirEventos(eventosNotif(antes, f, r));
+    if (m) mensajes.set(r.uid, m);
+    firmas[k][r.uid] = f; cambiados.add(k);
+  }
+  for (const k of cambiados) await refs[k].set({ firmas: firmas[k] });
+  if (primeraVez) { log('Notificaciones: primera vez, solo se guardó el estado actual.'); }
+  else if (mensajes.size) {
+    const tokens = await tokensDe([...mensajes.keys()]);
+    const lista = [...tokens].map(([uid, token]) => ({ uid, token, m: mensajes.get(uid) }));
+    const r = lista.length ? await enviar(lista) : { ok: 0, mal: 0 };
+    console.log('::notice::Notificaciones automáticas: ' + mensajes.size + ' repartidores con novedades · enviadas: ' + r.ok + (r.mal ? ' · fallidas: ' + r.mal : '') + ' (los demás no las activaron)');
+  }
+
+  // b) Avisos que mandó el administrador desde el panel
+  const cola = await db.collection('colaNotif').where('estado', '==', 'pendiente').get();
+  if (cola.empty) return;
+  const todos = await db.collection('notificaciones').get();
+  const suscritos = new Map();
+  todos.forEach(d => { if ((d.data().tokens || [])[0]) suscritos.set(d.id, d.data().tokens[0]); });
+  for (const doc of cola.docs) {
+    const n = doc.data();
+    const lista = [];
+    for (const [uid, token] of suscritos) {
+      const r = repartidores.get(uid);
+      if (r && aplicaA(n.paraQuien || 'TODOS', n.ids, r)) lista.push({ uid, token, m: { titulo: String(n.titulo || 'Portal CONTAX'), cuerpo: String(n.cuerpo || ''), link: n.link || 'inicio' } });
+    }
+    const r = await enviar(lista);
+    await doc.ref.update({ estado: 'enviado', enviados: r.ok, fallidos: r.mal, procesado: FieldValue.serverTimestamp() });
+    console.log('::notice::Notificación del administrador "' + n.titulo + '": enviada a ' + r.ok + ' celulares.');
+  }
+}
+
 /* ══════════ PRINCIPAL ══════════ */
 async function principal() {
   const refEstado = db.collection('privado').doc('estado');
@@ -299,6 +387,8 @@ async function principal() {
   escritor.set(db.collection('publico').doc('portal'), { ...publico, sincronizado: FieldValue.serverTimestamp() });
   await escritor.close();
   log('Repartidores actualizados: ' + escritos + (borrados ? ' · quitados: ' + borrados : ''));
+
+  try { await notificar(repartidores); } catch (e) { console.log('::warning::Notificaciones: ' + e.message); }
 
   estado.total = repartidores.size;
   estado.ultima = new Date().toISOString();
