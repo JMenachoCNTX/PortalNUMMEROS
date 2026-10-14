@@ -320,7 +320,10 @@ details.faq div{padding:0 16px 16px;font-size:14px;line-height:1.7;color:var(--n
   .cnt{padding:16px 14px calc(86px + env(safe-area-inset-bottom))}
   .pg-tit h1{font-size:26px}
   .nm-inicio{grid-template-columns:1fr}
-  .nm-inicio-foto{display:none}
+  .nm-inicio-foto{order:-1;min-height:0;height:210px}
+  .nm-inicio-foto>img{object-position:60% 22%}
+  .nm-inicio-foto figcaption{left:14px;bottom:12px;right:14px;gap:6px}
+  .nm-inicio-foto .nm-frase{font-size:15px}
   .nm-inicio-hero{min-height:0;padding:22px 18px}
   .nm-kpi b{font-size:22px}
   .nm-kpis{grid-template-columns:1fr 1fr}
@@ -507,6 +510,13 @@ body.dark-mode .nm-n-fill{fill:var(--verde-300)}
 .notif-txt{flex:1;font-size:14px;color:var(--nm-suave)}
 .notif-txt b{display:block;font:600 16px var(--nm-display);color:var(--nm-texto);margin-bottom:2px}
 .notif-acc{display:flex;gap:8px;flex:none}
+/* Ejemplo del mensaje del celular */
+.notif-demo{margin-top:14px;border:1px solid var(--nm-borde);border-radius:14px;background:var(--nm-campo);padding:12px 14px;font-size:13.5px}
+.notif-demo div{display:flex;justify-content:flex-end;gap:18px;margin-top:10px;font:600 14px var(--nm-display)}
+.notif-demo i{font-style:normal;color:var(--nm-suave)}
+.notif-demo b{color:#fff;background:var(--nm-boton);padding:4px 12px;border-radius:8px;box-shadow:0 0 0 3px var(--verde-300);animation:nmLatido 1.4s ease-in-out infinite}
+@keyframes nmLatido{50%{box-shadow:0 0 0 6px rgba(142,182,155,.35)}}
+.modal-cuerpo .pasos{margin-top:10px}
 @media (max-width:640px){.notif-card{flex-wrap:wrap}.notif-txt{flex-basis:calc(100% - 60px)}.notif-acc{width:100%}.notif-acc .btn{flex:1}}
 
 /* Asistente */
@@ -559,13 +569,13 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.6"></script>
+<script src="config.js?v=3.7"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.6"></script>
-<script src="chat.js?v=3.6"></script>
-<script src="notificaciones.js?v=3.6"></script>
+<script src="app.js?v=3.7"></script>
+<script src="chat.js?v=3.7"></script>
+<script src="notificaciones.js?v=3.7"></script>
 </body>
 </html>

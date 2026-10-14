@@ -573,8 +573,12 @@
             '<button class="nm-kpi" data-ir="reporte"><small>Total cobrado</small><b>' + bs(pag.total) + '</b><em>' + pag.cantidad + ' pago' + (pag.cantidad === 1 ? '' : 's') + '</em></button>' +
           '</div>' +
         '</section>' +
-        '<figure class="nm-inicio-foto"><img src="marca/clasicos/' + (S.oscuro ? 'arquimedes-eureka' : 'pitagoras-celular') + '.jpg" alt="Escultura griega revisando un celular">' +
-          '<figcaption>' + insignia(S.oscuro ? FOTOS_OSCURO[1] : FOTOS[3]) + '<div class="nm-frase">' + (S.oscuro ? FOTOS_OSCURO[1] : FOTOS[3]).frase + '</div></figcaption></figure>' +
+        (function () {
+          // Una escultura distinta cada vez que entra
+          var lista = S.oscuro ? FOTOS_OSCURO : FOTOS, f = lista[Math.floor(Math.random() * lista.length)];
+          return '<figure class="nm-inicio-foto"><img src="marca/clasicos/' + f.img + '.jpg"' + (f.pos ? ' style="object-position:' + f.pos + '"' : '') + ' alt="' + f.nombre + ', escultura griega de mármol">' +
+            '<figcaption>' + insignia(f) + '<div class="nm-frase">' + f.frase + '</div></figcaption></figure>';
+        })() +
       '</div>' +
       (window.NM_NOTIF ? window.NM_NOTIF.tarjeta() : '') +
       '<div id="carrusel"></div>' +
