@@ -439,6 +439,47 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .cr-p{font-weight:600;margin-bottom:4px}
 .cr-r{color:var(--nm-suave);font-size:14px;white-space:pre-line}
 
+/* Servicios y tutoriales */
+.cuenta.oculta{background:var(--nm-aviso-bg);color:var(--nm-aviso);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px}
+.srv-hero{position:relative;overflow:hidden;background:var(--verde-900);color:#fff;border-radius:var(--r-lg);padding:28px 26px;margin-bottom:14px}
+.srv-hero .nm-patron{opacity:.5;-webkit-mask-image:linear-gradient(100deg,transparent 45%,#000);mask-image:linear-gradient(100deg,transparent 45%,#000)}
+.srv-hero-txt{position:relative;max-width:560px}
+.srv-hero small{font:600 12px var(--nm-display);letter-spacing:.16em;text-transform:uppercase;color:var(--verde-300)}
+.srv-hero h2{font:700 28px/1.12 var(--nm-display);margin:8px 0 10px}
+.srv-hero p{color:var(--verde-100);font-size:15px}
+.srv-planes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;margin-bottom:14px}
+.srv-plan{position:relative;background:var(--nm-superficie);border:1px solid var(--nm-borde);border-radius:var(--r-lg);padding:22px;display:flex;flex-direction:column;gap:10px}
+.srv-plan.destacado{border:2px solid var(--nm-acento)}
+.srv-tag{position:absolute;top:-11px;left:20px;background:var(--nm-boton);color:var(--nm-sobre-boton);font:600 11px var(--nm-display);letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:999px}
+.srv-plan h3{font:700 22px var(--nm-display)}
+.srv-precio{font:600 15px var(--nm-display);color:var(--nm-acento);background:var(--nm-campo);border-radius:10px;padding:8px 12px;align-self:flex-start}
+.srv-plan ul{list-style:none;display:flex;flex-direction:column;gap:8px;margin:6px 0 10px;flex:1}
+.srv-plan li{display:flex;gap:8px;font-size:14px}
+.srv-plan li .ic{color:var(--nm-acento);flex:none}
+.tut-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:14px}
+.tut{background:var(--nm-superficie);border:1px solid var(--nm-borde);border-radius:var(--r-lg);overflow:hidden}
+.tut-media{aspect-ratio:16/9;background:var(--nm-campo)}
+.tut-media iframe,.tut-media img{width:100%;height:100%;border:0;display:block;object-fit:cover}
+.tut-pronto{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--nm-suave);font:600 13px var(--nm-display);letter-spacing:.08em;text-transform:uppercase}
+.tut-pronto .ic svg{width:30px;height:30px}
+.tut-txt{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.tut-txt b{font:600 17px/1.25 var(--nm-display)}
+.tut-txt p{font-size:13.5px}
+
+/* Animación de carga */
+.nm-carga{position:fixed;inset:0;z-index:4000;background:var(--nm-fondo);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center;overflow:hidden;animation:nmFundido .25s ease}
+.nm-carga .nm-patron{opacity:.6}
+.nm-carga .nm-n{position:relative;width:96px;height:auto;margin-bottom:18px;filter:drop-shadow(0 10px 22px rgba(5,31,32,.12))}
+.nm-n-base{fill:var(--verde-100)}
+.nm-n-fill{fill:var(--verde-700)}
+body.dark-mode .nm-n-base{fill:var(--verde-800)}
+body.dark-mode .nm-n-fill{fill:var(--verde-300)}
+.nm-carga .nm-titulo{position:relative;font:700 24px var(--nm-display);letter-spacing:.02em;color:var(--nm-texto)}
+.nm-carga .nm-paso{position:relative;font-size:14.5px;color:var(--nm-suave);min-height:1.5em}
+.nm-carga .nm-paso.entra{animation:nmPasoEntra .35s ease}
+@keyframes nmPasoEntra{from{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.nm-carga,.nm-carga .nm-paso.entra{animation:none}}
+
 /* Notificaciones */
 .notif-card{display:flex;align-items:center;gap:14px;background:var(--nm-superficie);border:1px solid var(--nm-borde);border-left:4px solid var(--verde-300);border-radius:var(--r-lg);padding:14px 16px;margin-bottom:14px}
 .notif-ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--nm-ok-bg);color:var(--nm-ok)}
@@ -497,13 +538,13 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.3"></script>
+<script src="config.js?v=3.4"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.3"></script>
-<script src="chat.js?v=3.3"></script>
-<script src="notificaciones.js?v=3.3"></script>
+<script src="app.js?v=3.4"></script>
+<script src="chat.js?v=3.4"></script>
+<script src="notificaciones.js?v=3.4"></script>
 </body>
 </html>

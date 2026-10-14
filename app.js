@@ -62,6 +62,9 @@
     abajo: '<path d="m6 9 6 6 6-6"/>',
     ojo: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     subir: '<path d="M12 20V9M7 14l5-5 5 5M5 4h14"/>',
+    factura: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+    video: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7"/>',
     campana: '<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
     copiar: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
     enviar: '<path d="M4 12 20 4l-6 16-3-7z"/>',
@@ -182,7 +185,35 @@
     });
   }
 
+  /* ── Animación de carga al entrar (mínimo 5 segundos) ── */
+  var CARGA_MS = 5000, cargaDesde = 0, cargaPaso = null;
+  var PASOS = ['Verificando tu acceso…', 'Sincronizando tus pagos…', 'Revisando tus facturas y trámites…', 'Preparando tu resumen…'];
+  var N_PATH = 'M0 427 L0 728 L136 728 L136 634 Z M410 0 L410 85 L546 292 L546 0 Z M0 0 L148 0 L410 458.5 L410 341 L546 548 L546 728 L401.71 728 L136 263 L136 379 L0 172 Z';
+  function mostrarCarga() {
+    if (document.getElementById('nmCarga')) return;
+    cargaDesde = Date.now();
+    pararCarrusel();
+    app.innerHTML = '<div class="nm-carga" id="nmCarga" role="status" aria-live="polite"><div class="nm-patron" aria-hidden="true"></div>' +
+      '<svg class="nm-n" viewBox="0 0 546 728" role="img" aria-label="Cargando"><clipPath id="nmLlenado"><rect class="nm-ola" x="0" y="728" width="546" height="728"><animate attributeName="y" values="728;520;300;90;0" keyTimes="0;0.25;0.5;0.8;1" dur="' + (CARGA_MS / 1000) + 's" fill="freeze" calcMode="spline" keySplines=".4 0 .6 1;.4 0 .6 1;.4 0 .6 1;.4 0 .6 1"/></rect></clipPath>' +
+      '<path class="nm-n-base" d="' + N_PATH + '"></path><path class="nm-n-fill" clip-path="url(#nmLlenado)" d="' + N_PATH + '"></path></svg>' +
+      '<p class="nm-titulo">Actualizando datos</p><p class="nm-paso" id="nmPaso">' + PASOS[0] + '</p></div>';
+    var i = 0;
+    clearInterval(cargaPaso);
+    cargaPaso = setInterval(function () {
+      var el = document.getElementById('nmPaso');
+      if (!el) { clearInterval(cargaPaso); return; }
+      i = Math.min(i + 1, PASOS.length - 1);
+      el.classList.remove('entra'); void el.offsetWidth; el.textContent = PASOS[i]; el.classList.add('entra');
+    }, CARGA_MS / PASOS.length);
+  }
+  /* Espera a que la animación cumpla su tiempo antes de mostrar el portal */
+  function trasCarga(fn) {
+    var falta = cargaDesde ? Math.max(0, CARGA_MS - (Date.now() - cargaDesde)) : 0;
+    setTimeout(function () { clearInterval(cargaPaso); cargaDesde = 0; fn(); }, falta);
+  }
+
   function cargarDatos() {
+    mostrarCarga();
     // El administrador ve el portal con los datos del usuario de prueba
     var uid = S.admin ? idSeguro(C.accesoAdmin) : S.usuario.uid;
     Promise.all([
@@ -201,7 +232,7 @@
       aplicarContenido(r[2].exists ? r[2].data() : {});
       S.lecturas = {};
       r[3].forEach(function (d) { S.lecturas[d.id] = true; });
-      arrancarApp();
+      trasCarga(arrancarApp);
     }).catch(function (e) {
       console.error(e);
       pintarMensaje('No pudimos cargar tus datos', 'Revisa tu conexión a internet e intenta de nuevo.');
@@ -247,6 +278,7 @@
   }
 
   function pintarMensaje(titulo, texto) {
+    clearInterval(cargaPaso); cargaDesde = 0;
     app.innerHTML = '<div class="nm-pantalla"><div class="nm-patron" aria-hidden="true"></div>' +
       '<img src="marca/logos/nummeros-logotipo-apilado-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS">' +
       '<div style="max-width:380px"><div class="nm-login-titulo">' + esc(titulo) + '</div><p class="muted" style="margin-top:6px">' + esc(texto) + '</p></div>' +
@@ -347,6 +379,8 @@
     { id: 'reporte', t: 'Reporte', i: 'resumen' },
     { sec: 'Ayuda' },
     { id: 'tramites', t: 'Mis trámites', i: 'tramites' },
+    { id: 'servicios', t: 'Ayuda con tu facturación', i: 'factura', seccion: 'servicios' },
+    { id: 'tutoriales', t: 'Tutoriales', i: 'video', seccion: 'tutoriales' },
     { id: 'preguntas', t: 'Preguntas', i: 'preguntas' },
     { id: 'contacto', t: 'Contacto', i: 'contacto' },
     { id: 'notificaciones', t: 'Notificaciones', i: 'campana' },
@@ -368,7 +402,12 @@
     { id: 'admin-preguntas', t: 'Preguntas', i: 'preguntas' },
     { id: 'admin-registros', t: 'Chats y lecturas', i: 'chat' }
   ];
-  function menu() { return S.admin ? MENU.concat(MENU_ADMIN) : MENU; }
+  function seccionVisible(k) { return !k || (C.secciones && C.secciones[k]) || S.admin; }
+  function seccionOculta(k) { return k && !(C.secciones && C.secciones[k]); }
+  function menu() {
+    var m = MENU.filter(function (x) { return seccionVisible(x.seccion); });
+    return S.admin ? m.concat(MENU_ADMIN) : m;
+  }
 
   function cuentas() {
     var d = S.datos || {};
@@ -450,10 +489,11 @@
     document.getElementById('nav').innerHTML = menu().map(function (m) {
       if (m.sec) return '<span class="nav-sec">' + m.sec + '</span>';
       var c = n[m.id] ? '<span class="cuenta">' + n[m.id] + '</span>' : '';
+      if (seccionOculta(m.seccion)) c = '<span class="cuenta oculta">Oculta</span>';
       return '<button class="nav-link' + (S.pagina === m.id ? ' active' : '') + '" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span>' + c + '</button>';
     }).join('') +
       '<div class="nav-pie"><img src="marca/logos/nummeros-logotipo-firma-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS by CONTAX">Portal CONTAX · v' + esc(C.version) + '</div>';
-    var enMas = ['reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
+    var enMas = ['reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
     document.getElementById('tabbar').innerHTML = TABS.map(function (t) {
       var on = t.id === S.pagina || (t.id === 'mas' && enMas);
       return '<button class="' + (on ? 'on' : '') + '" ' + (t.id === 'mas' ? 'data-accion="mas"' : 'data-ir="' + t.id + '"') + '><i>' + ic(t.i) + '</i>' + t.t + '</button>';
@@ -462,6 +502,7 @@
 
   function ir(p, sinHistorial) {
     if (!PAGINAS[p]) p = 'inicio';
+    if ((p === 'servicios' || p === 'tutoriales') && !seccionVisible(p)) p = 'inicio';
     pararCarrusel();
     if (S.grafico) { S.grafico.destroy(); S.grafico = null; }
     S.pagina = p;
@@ -772,6 +813,52 @@
     });
   };
 
+  /* ── Ayuda con tu facturación (servicios de CONTAX) ── */
+  function marcaOculta(k) { return seccionOculta(k) ? '<div class="aviso alerta">' + ic('candado') + '<div><b>Vista previa: esta pestaña está oculta para los repartidores</b>Cuando esté lista, se publica cambiando secciones.' + k + ' a true en config.js.</div></div>' : ''; }
+  var PLANES = [
+    { id: 'facturacion', nombre: 'Facturación semanal', resumen: 'Nosotros emitimos tus facturas cada semana. Tú solo cobras.',
+      incluye: ['Emitimos tu factura a Milthagor con el monto exacto de cada semana', 'La enviamos por ti, sin plazos perdidos', 'Te avisamos cuando está emitida', 'Guardamos tus facturas como respaldo'] },
+    { id: 'completo', nombre: 'Servicio completo', destacado: true, resumen: 'Facturación + declaraciones de impuestos. Te olvidas de todo.',
+      incluye: ['Todo lo del plan de Facturación semanal', 'Declaraciones mensuales de impuestos (IVA e IT)', 'Control de vencimientos para evitar multas', 'Atención prioritaria por WhatsApp'] }
+  ];
+  PAGINAS.servicios = function () {
+    var d = S.datos || {};
+    function pedir(plan) { return wa(C.whatsappGeneral, 'Hola CONTAX, soy ' + (d.nombre || '') + ' (ID ' + (d.id || '') + '). Quiero información del servicio "' + plan + '".'); }
+    return marcaOculta('servicios') + titulo('Ayuda con tu facturación', 'Deja tus facturas e impuestos en manos de CONTAX y dedícate a repartir.') +
+      '<section class="srv-hero"><div class="nm-patron oscuro" aria-hidden="true"></div><div class="srv-hero-txt"><small>CONTAX · Consultora contable</small>' +
+        '<h2>¿Se te pasa el jueves sin enviar tu factura?</h2><p>Si no facturas a tiempo, tu pago se corre a la semana siguiente. Con nuestro servicio, tus facturas salen siempre a tiempo.</p></div></section>' +
+      '<div class="srv-planes">' + PLANES.map(function (p) {
+        return '<article class="srv-plan' + (p.destacado ? ' destacado' : '') + '">' + (p.destacado ? '<span class="srv-tag">Recomendado</span>' : '') +
+          '<h3>' + p.nombre + '</h3><p class="muted">' + p.resumen + '</p><div class="srv-precio">Consulta el precio</div>' +
+          '<ul>' + p.incluye.map(function (x) { return '<li>' + ic('check') + '<span>' + x + '</span></li>'; }).join('') + '</ul>' +
+          '<a class="btn ' + (p.destacado ? '' : 'sec') + ' ancho" href="' + pedir(p.nombre) + '" target="_blank" rel="noopener">' + ic('whatsapp') + 'Quiero este servicio</a></article>';
+      }).join('') + '</div>' +
+      '<div class="card"><div class="h2">¿Aún no tienes NIT?</div><p style="margin-bottom:14px">Te ayudamos a sacar tu <b>NIT</b>, tu <b>Matrícula de Comercio</b> y tu <b>ROE</b> para que puedas facturar.</p>' +
+        '<a class="btn sec" href="' + pedir('Trámite de NIT, Matrícula y ROE') + '" target="_blank" rel="noopener">' + ic('whatsapp') + 'Quiero sacar mi NIT</a></div>';
+  };
+
+  /* ── Tutoriales (videos e imágenes) ── */
+  var TUTORIALES = [
+    { titulo: 'Cómo entrar al portal', texto: 'Con tu celular y tu ID de Yango.', tipo: 'Video' },
+    { titulo: 'Instala el portal en tu celular', texto: 'Tenlo como una app más, en iPhone o Android.', tipo: 'Video' },
+    { titulo: 'Activa las notificaciones', texto: 'Para enterarte cuando se carga tu semana.', tipo: 'Imágenes' },
+    { titulo: 'Cómo emitir tu factura en el SIAT', texto: 'Paso a paso, a Milthagor S.R.L., NIT 550276028.', tipo: 'Video' },
+    { titulo: 'Cómo pedir soporte por un pago', texto: 'Abre un trámite y sigue su respuesta.', tipo: 'Imágenes' },
+    { titulo: 'Descarga tu reporte en PDF', texto: 'Todos tus pagos en un documento.', tipo: 'Imágenes' }
+  ];
+  function videoEmbebido(url) {
+    var m = String(url || '').match(/(?:youtu\.be\/|v=|shorts\/)([\w-]{11})/);
+    return m ? '<iframe src="https://www.youtube-nocookie.com/embed/' + m[1] + '" title="Video" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>' : '';
+  }
+  PAGINAS.tutoriales = function () {
+    var lista = (S.contenido && S.contenido.tutoriales && S.contenido.tutoriales.length) ? S.contenido.tutoriales.filter(vigente) : TUTORIALES;
+    return marcaOculta('tutoriales') + titulo('Tutoriales', 'Aprende a usar el portal y a facturar, en videos cortos e imágenes.') +
+      '<div class="tut-grid">' + lista.map(function (t) {
+        var media = videoEmbebido(t.video) || (t.imagen ? '<img src="' + esc(t.imagen) + '" alt="" loading="lazy">' : '<div class="tut-pronto">' + ic(t.tipo === 'Imágenes' ? 'imagen' : 'video') + '<span>Próximamente</span></div>');
+        return '<article class="tut"><div class="tut-media">' + media + '</div><div class="tut-txt"><span class="chip neutro">' + esc(t.tipo || (t.video ? 'Video' : 'Imágenes')) + '</span><b>' + esc(t.titulo) + '</b><p class="muted">' + esc(t.texto || '') + '</p></div></article>';
+      }).join('') + '</div>';
+  };
+
   /* ── Contacto ── */
   PAGINAS.contacto = function () {
     return titulo('Contacto', 'Estamos para ayudarte.') +
@@ -823,8 +910,9 @@
     var h = document.createElement('div');
     h.className = 'hoja-mas'; h.id = 'hojaMas';
     h.innerHTML = '<div class="fondo" data-accion="cerrarMas"></div><div class="hoja" role="dialog" aria-label="Más opciones"><div class="agarre"></div>' +
-      [['reporte', 'Reporte', 'resumen'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
-        return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span></button>';
+      [['reporte', 'Reporte', 'resumen'], ['servicios', 'Ayuda con tu facturación', 'factura', 'servicios'], ['tutoriales', 'Tutoriales', 'video', 'tutoriales'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
+        if (!seccionVisible(m[3])) return '';
+        return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (seccionOculta(m[3]) ? '<span class="cuenta oculta">Oculta</span>' : '') + '</button>';
       }).join('') +
       (S.admin ? '<span class="nav-sec">Administración</span>' + MENU_ADMIN.slice(1).map(function (m) {
         return '<button class="nav-link" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span></button>';
@@ -1016,8 +1104,9 @@
       avisos: S.datos.avisos.map(function (a) { return Object.assign({ id: 'v1', activo: true, paraQuien: 'TODOS' }, a); }),
       preguntas: [].concat.apply([], S.publico.preguntas.map(function (c, i) { return c.preguntas.map(function (q, j) { return { id: 'q' + i + j, activo: true, categoria: c.nombre, p: q.p, r: q.r, orden: j + 1 }; }); }))
     });
-    if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js', function () { arrancarApp(); }); return; }
-    arrancarApp();
+    mostrarCarga();
+    if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js', function () { trasCarga(arrancarApp); }); return; }
+    trasCarga(arrancarApp);
   }
 
   /* Lo que usan admin.js, reporte.js y chat.js */
