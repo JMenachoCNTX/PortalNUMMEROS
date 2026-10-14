@@ -7,5 +7,5 @@ workers_dev = true
 
 [vars]
 PROYECTO_FIREBASE = "portal-nummeros"
-ORIGENES = "https://portalnummeros.contaxbolivia.com,http://localhost:8765"
+ORIGENES = "https://portalnummeros.contaxbolivia.com,http://portalnummeros.contaxbolivia.com,http://localhost:8765"
 MODELO = "deepseek-chat"
