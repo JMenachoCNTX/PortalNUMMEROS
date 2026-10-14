@@ -466,6 +466,12 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .tut-txt b{font:600 17px/1.25 var(--nm-display)}
 .tut-txt p{font-size:13.5px}
 
+/* Cifras que giran */
+.nm-cifra{display:inline-flex;align-items:flex-start;overflow:hidden}
+.nm-rod{display:inline-block;height:1.1em;line-height:1.1em;overflow:hidden;vertical-align:top}
+.nm-tira{display:block;line-height:1.1em;transform:translateY(0);transition-property:transform;transition-timing-function:cubic-bezier(.15,.75,.2,1)}
+.nm-cifra .nm-sep{display:inline-block;height:1.1em;line-height:1.1em}
+
 /* Animación de carga */
 .nm-carga{position:fixed;inset:0;z-index:4000;background:var(--nm-fondo);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:24px;text-align:center;overflow:hidden;animation:nmFundido .25s ease}
 .nm-carga .nm-patron{opacity:.6}
@@ -538,13 +544,13 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.4"></script>
+<script src="config.js?v=3.5"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.4"></script>
-<script src="chat.js?v=3.4"></script>
-<script src="notificaciones.js?v=3.4"></script>
+<script src="app.js?v=3.5"></script>
+<script src="chat.js?v=3.5"></script>
+<script src="notificaciones.js?v=3.5"></script>
 </body>
 </html>

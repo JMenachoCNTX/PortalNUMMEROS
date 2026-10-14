@@ -588,7 +588,7 @@
           '<button class="btn sec chico" data-ir="tramites">Ver mis trámites</button></div>' +
       '</div>';
   };
-  DESPUES.inicio = function () { pintarCarrusel(); };
+  DESPUES.inicio = function () { pintarCarrusel(); animarCifras(document.getElementById('pagina')); };
 
   PAGINAS.pendientes = function () {
     var d = S.datos, lista = d.pendientes || [], r = (d.resumen || {}).pendientes || { total: 0 };
@@ -630,6 +630,30 @@
           : vacio('Todavía no tienes pagos registrados')) +
       '</div>';
   };
+
+  /* ── Cifras que giran como un contador y se detienen en el valor real ── */
+  var CIFRAS_MS = 3000;
+  function animarCifras(cont) {
+    if (!cont || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    var tira = ''; for (var v = 0; v < 3; v++) for (var d = 0; d < 10; d++) tira += d + '<br>';
+    cont.querySelectorAll('.nm-kpi b').forEach(function (b) {
+      var real = b.textContent;
+      if (!/\d/.test(real)) return;
+      var n = 0, html = '';
+      for (var i = 0; i < real.length; i++) {
+        var c = real.charAt(i);
+        if (/\d/.test(c)) html += '<span class="nm-rod"><span class="nm-tira" data-d="' + c + '" style="transition-duration:' + (CIFRAS_MS - 700 + (n++ % 4) * 230) + 'ms">' + tira + '</span></span>';
+        else html += '<span class="nm-sep">' + (c === ' ' ? '&nbsp;' : esc(c)) + '</span>';
+      }
+      b.setAttribute('aria-label', real);
+      b.classList.add('nm-cifra');
+      b.innerHTML = html;
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        b.querySelectorAll('.nm-tira').forEach(function (t) { t.style.transform = 'translateY(-' + ((20 + Number(t.getAttribute('data-d'))) * 1.1).toFixed(2) + 'em)'; });
+      }); });
+      setTimeout(function () { if (document.body.contains(b)) { b.textContent = real; b.classList.remove('nm-cifra'); b.removeAttribute('aria-label'); } }, CIFRAS_MS + 250);
+    });
+  }
 
   /* ── Reporte completo (se descarga en PDF con reporte.js) ── */
   var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -712,6 +736,7 @@
       '</div>';
   };
   DESPUES.reporte = function () {
+    animarCifras(document.getElementById('pagina'));
     var R = datosReporte(S.periodo || 'todo');
     var cv = document.getElementById('grafico');
     if (!cv || !R.meses.length) return;
