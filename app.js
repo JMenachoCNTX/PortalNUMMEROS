@@ -630,7 +630,7 @@
           ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Semana</th><th>Período</th><th>Estado</th><th class="monto">Importe</th></tr></thead><tbody>' +
             lista.map(function (p) {
               return '<tr><td data-et="Semana"><b class="num">' + esc(p.semana) + '</b></td><td data-et="Período">' + esc(p.rango) + '</td>' +
-                '<td data-et="Estado"><span class="chip pend">' + esc(p.estado || 'Pendiente') + '</span></td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>';
+                '<td data-et="Estado">' + chipPendiente(p.estado) + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>';
             }).join('') +
             '</tbody><tfoot><tr><td colspan="3">Total por cobrar</td><td class="monto" data-et="Total por cobrar">' + bs(r.total) + '</td></tr></tfoot></table></div>'
           : vacio('No tienes pagos pendientes', 'Cuando registremos una semana nueva aparecerá aquí.')) +
@@ -740,7 +740,7 @@
       '</div>' +
       '<div class="card"><div class="h2">Pagos pendientes <small>' + R.pendientes.length + '</small></div>' +
         (R.pendientes.length ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Semana</th><th>Período</th><th>Estado</th><th class="monto">Importe</th></tr></thead><tbody>' +
-          R.pendientes.map(function (p) { return '<tr><td data-et="Semana" class="num"><b>' + esc(p.semana) + '</b></td><td data-et="Período">' + esc(p.rango) + '</td><td data-et="Estado"><span class="chip pend">' + esc(p.estado || 'Pendiente') + '</span></td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>'; }).join('') +
+          R.pendientes.map(function (p) { return '<tr><td data-et="Semana" class="num"><b>' + esc(p.semana) + '</b></td><td data-et="Período">' + esc(p.rango) + '</td><td data-et="Estado">' + chipPendiente(p.estado) + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>'; }).join('') +
           '</tbody><tfoot><tr><td colspan="3">Total por cobrar</td><td class="monto" data-et="Total por cobrar">' + bs(R.totalPendiente) + '</td></tr></tfoot></table></div>'
           : vacio('No tienes pagos pendientes')) +
       '</div>' +
@@ -787,6 +787,13 @@
   };
 
   /* ── Trámites ── */
+  /* Estado de un pago pendiente (sin emojis, con color) */
+  function chipPendiente(e) {
+    e = String(e || '').replace(/[\u2600-\u27BF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/g, '').trim() || 'Pendiente';
+    var u = e.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    var c = /RETEN|RECHAZ|FALTA|NO HABIL|OBSERV|ANULAD/.test(u) ? 'mal' : (/HABILITAD|APROBAD|RECIBID|PAGAD|LISTO/.test(u) ? 'ok' : 'pend');
+    return '<span class="chip ' + c + '">' + esc(e) + '</span>';
+  }
   function claseTramite(t) {
     var e = String(t.estado || '').toUpperCase(), r = String(t.resolucion || '').toUpperCase();
     if (/^RECHAZ|^ANULAD|VENCID/.test(e) || /^RECHAZ|^ANULAD/.test(r)) return 'mal';

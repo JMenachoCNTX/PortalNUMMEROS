@@ -59,13 +59,14 @@ async function leerRangos(archivo, rangos, { opcional = false } = {}) {
   const j = await res.json();
   return (j.valueRanges || []).map(v => v.values || []);
 }
+const ultimaLetra = o => Object.values(o).filter(v => typeof v === 'string' && /^[A-Z]{1,2}$/.test(v)).sort((a, b) => a.length - b.length || a.localeCompare(b)).pop();
 const hoja = n => "'" + String(n).replace(/'/g, "''") + "'";
 
 async function leerTodo() {
   const H = CFG.HOJAS;
   log('Leyendo el archivo principal…');
   const [login, pendientes, pagos, habilitados, asegurados] = await leerRangos(CFG.SPREADSHEET_ID, [
-    hoja(H.login.nombre) + '!A2:D', hoja(H.pendientes.nombre) + '!A2:M', hoja(H.pagos.nombre) + '!A2:F',
+    hoja(H.login.nombre) + '!A2:D', hoja(H.pendientes.nombre) + '!A2:M', hoja(H.pagos.nombre) + '!A' + (H.pagos.filaInicio || 2) + ':' + ultimaLetra(H.pagos),
     hoja(H.habilitados.nombre) + '!A2:A', hoja(H.asegurados.nombre) + '!A2:A'
   ]);
   const tramites = {};
@@ -75,7 +76,7 @@ async function leerTodo() {
     const [filas] = await leerRangos(t.archivoId, [hoja(t.hoja)], { opcional: true });
     tramites[t.clave] = filas;
   }
-  log('BDYANGO: ' + login.length + ' filas · PPendientes: ' + pendientes.length + ' · Pagos: ' + pagos.length);
+  log('BDYANGO: ' + login.length + ' filas · PPendientes: ' + pendientes.length + ' · ' + H.pagos.nombre + ': ' + pagos.length);
   return { login, pendientes, pagos, habilitados, asegurados, tramites };
 }
 

@@ -1,24 +1,33 @@
 name: Sincronizar Google Sheets con Firebase
 
+# GitHub atrasa mucho los horarios automáticos (a veces 4 o 5 horas).
+# Por eso el robot se queda trabajando ~5 h 40 min sincronizando cada 15 minutos
+# y, al terminar, se vuelve a lanzar solo. El horario de abajo queda de respaldo.
 on:
   schedule:
-    - cron: '*/15 * * * *'   # cada 15 minutos (GitHub a veces se demora unos minutos más)
-  workflow_dispatch: {}      # botón "Run workflow" para sincronizar al instante
+    - cron: '7 */3 * * *'    # respaldo: por si la cadena se corta
+  workflow_dispatch:         # botón "Run workflow"
+    inputs:
+      una_vez:
+        description: 'Sincronizar una sola vez (sin quedarse cada 15 minutos)'
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ['sync/**', 'firestore.rules']
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
-  group: sincronizar
+  group: sincronizar-${{ github.event_name == 'push' && 'cambio' || 'bucle' }}
   cancel-in-progress: false
 
 jobs:
   sincronizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 355
     steps:
       - uses: actions/checkout@v4
 
@@ -32,22 +41,32 @@ jobs:
         working-directory: sync
         run: npm ci --no-audit --no-fund
 
-      - name: Sincronizar
-        working-directory: sync
+      - name: Sincronizar (cada 15 minutos)
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           ADMIN_CLAVE: ${{ secrets.ADMIN_CLAVE }}
-        run: node sincronizar.mjs
-
-      - name: Publicar imágenes nuevas de anuncios
+          UNA_VEZ: ${{ github.event_name == 'push' || inputs.una_vez == true }}
         run: |
           git config user.name "Sincronización NUMMEROS"
           git config user.email "actions@users.noreply.github.com"
-          git add anuncios
-          if git diff --cached --quiet; then
-            echo "Sin imágenes nuevas."
-          else
-            git commit -m "Anuncios: actualizar imágenes"
-            git pull --rebase
-            git push
-          fi
+          FIN=$((SECONDS + 340*60)); VUELTA=0; FALLOS=0
+          while true; do
+            VUELTA=$((VUELTA + 1)); INICIO=$SECONDS
+            echo "::group::Sincronización $VUELTA ($(TZ=America/La_Paz date '+%d/%m %H:%M'))"
+            git pull --rebase --quiet || true
+            if (cd sync && node sincronizar.mjs); then FALLOS=0; else FALLOS=$((FALLOS + 1)); echo "::warning::La sincronización $VUELTA falló"; fi
+            git add anuncios
+            if ! git diff --cached --quiet; then git commit -m "Anuncios: actualizar imágenes" && (git pull --rebase && git push || echo "::warning::No se pudieron subir las imágenes"); fi
+            echo "::endgroup::"
+            [ "$UNA_VEZ" = "true" ] && { [ $FALLOS -eq 0 ] || exit 1; break; }
+            [ $FALLOS -ge 3 ] && { echo "::error::3 fallos seguidos, revisa el detalle de arriba"; exit 1; }
+            ESPERA=$((900 - (SECONDS - INICIO))); [ $ESPERA -lt 60 ] && ESPERA=60
+            [ $((SECONDS + ESPERA)) -ge $FIN ] && break
+            sleep $ESPERA
+          done
+
+      - name: Volver a lanzarse
+        if: always() && github.event_name != 'push' && inputs.una_vez != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run sincronizar.yml --ref main

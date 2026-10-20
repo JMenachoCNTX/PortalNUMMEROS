@@ -17,7 +17,9 @@ export const DOMINIO_USUARIOS = 'repartidores.portalnummeros.app';
 export const HOJAS = {
   login: { nombre: 'BDYANGO', id: 'B', nombreCol: 'C', celular: 'D' },
   pendientes: { nombre: 'PPendientes', semana: 'C', rango: 'D', id: 'E', importe: 'G', estado: 'M' },
-  pagos: { nombre: 'Pagos', fechaPago: 'A', semana: 'B', rango: 'C', id: 'D', importe: 'F' },
+  // Historial completo de pagos (antes se leía la hoja "Pagos", que solo muestra el último mes).
+  // Para volver a la hoja "Pagos": { nombre: 'Pagos', filaInicio: 2, fechaPago: 'A', semana: 'B', rango: 'C', id: 'D', importe: 'F' }
+  pagos: { nombre: 'HistPagosMTG', filaInicio: 3, fechaPago: 'B', semana: 'C', rango: 'D', id: 'E', importe: 'G' },
   habilitados: { nombre: 'Habilitados' },   // si el ID está en la columna A = NO habilitado
   asegurados: { nombre: 'ASEGURADOS' },     // si el ID está en la columna A = presentó póliza
   anuncios: { nombre: 'Anuncios' },         // A Activo | B Imagen | C Link | D Orden | E Desde | F Hasta | G Título

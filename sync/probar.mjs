@@ -18,11 +18,11 @@ const tablas = {
     ['', '', '40', '29/09 al 05/10', '27391057', '', '512,80', '', '', '', '', '', 'Factura recibida'],
     ['', '', '41', '06/10 al 12/10', '99999999', '', 100, '', '', '', '', '', 'Pendiente'] // no existe
   ],
-  // A fecha, B semana, C rango, D id, E nombre, F importe
+  // HistPagosMTG: A nro, B fecha, C semana, D rango, E id, F nombre, G importe
   pagos: [
-    ['26/09/2026', '37', '08/09 al 14/09', '27391057', 'JUAN', 538.4],
-    ['03/10/2026', '38', '15/09 al 21/09', '27391057', 'JUAN', 486],
-    ['03/10/2026', '38', '15/09 al 21/09', '11112222', 'MARIA', 300]
+    ['1', '26/09/2026', '37', '08/09 al 14/09', '27391057', 'JUAN', '538,40'],
+    ['2', '3/10/2026', '38', '15/09 al 21/09', '27391057', 'JUAN', '486,00'],
+    ['3', '3/10/2026', '38', '15/09 al 21/09', '11112222', 'MARIA', '1.300,00']
   ],
   habilitados: [['11112222']],
   asegurados: [['27391057']],
@@ -66,7 +66,7 @@ assert.equal(maria.celular, '59170000002');
 assert.equal(juan.poliza, true); assert.equal(maria.habilitado, false); assert.equal(juan.habilitado, true);
 assert.equal(juan.pendientes.length, 2);
 assert.equal(juan.resumen.pendientes.total, 928);
-assert.equal(juan.historial[0].fechaPago, '03/10/2026', 'El pago más reciente va primero');
+assert.equal(juan.historial[0].fechaPago, '3/10/2026', 'El pago más reciente va primero');
 assert.equal(juan.resumen.pagados.total, 1024.4);
 assert.equal(juan.tramites.length, 2);
 assert.equal(juan.tramites[0].numero, 'SOP-0004');
@@ -131,5 +131,10 @@ console.log('✔ Todas las pruebas pasaron (' + repartidores.size + ' repartidor
   assert.equal(eventosNotif(firmaNotif(r2), firmaNotif(r2), r2).length, 0, 'Sin cambios no avisa');
   assert.equal(aplicaA('IDS', '5, 1', r), true); assert.equal(aplicaA('SIN POLIZA', '', { poliza: true }), false);
   assert.equal(bsTexto(1234.5), 'Bs 1.234,50');
+  const viejo = { p: a.p, h: 5, t: a.t };   // firma guardada con el formato anterior
+  assert.equal(eventosNotif(viejo, firmaNotif(r2), r2).filter(e => /pago/.test(e.titulo)).length, 0, 'Con la firma anterior no avisa pagos viejos');
+  const { repararTexto, sinEmojis } = await import('./logica.mjs');
+  assert.equal(repararTexto('BaÃ©z'), 'Baéz'); assert.equal(repararTexto('Peña'), 'Peña');
+  assert.equal(sinEmojis('Retención ❌').trim(), 'Retención');
   console.log('✔ Notificaciones: pruebas pasaron.');
 }

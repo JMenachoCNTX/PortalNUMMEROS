@@ -22,6 +22,15 @@ export function columna(letra) {
   return n - 1;
 }
 export function sinEmojis(t) { return String(t || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '').replace(/[ \t]{2,}/g, ' ').replace(/^[ \t]+/gm, ''); }
+/** Arregla textos con acentos dañados ("BaÃ©z" → "Baéz") */
+export function repararTexto(t) {
+  t = String(t || '');
+  if (!/[ÃÂ][\u0080-\u00BF]/.test(t)) return t;
+  try {
+    const r = Buffer.from(t, 'latin1').toString('utf8');
+    return r.includes('\uFFFD') ? t : r;
+  } catch (e) { return t; }
+}
 export function texto(v) { return v === null || v === undefined ? '' : String(v).trim(); }
 export function numero(v) {
   if (typeof v === 'number') return v;
@@ -115,7 +124,7 @@ export function armar(tablas, cfg, opciones = {}) {
     if (!/^591\d{8}$/.test(cel)) { diag.celMalo.push('fila ' + fila + ' (' + cel.length + ' dígitos)'); return; }
     if (repartidores.has(idSeguro(id))) diag.duplicados.push('fila ' + fila);
     repartidores.set(idSeguro(id), {
-      uid: idSeguro(id), id, nombre: texto(f[iNom]), celular: cel,
+      uid: idSeguro(id), id, nombre: repararTexto(texto(f[iNom])), celular: cel,
       habilitado: true, poliza: false, pendientes: [], historial: [], tramites: []
     });
   });
@@ -160,7 +169,7 @@ export function armar(tablas, cfg, opciones = {}) {
     if (!r || !texto(f[columna(P.id)])) continue;
     r.pendientes.push({
       semana: texto(f[columna(P.semana)]), rango: texto(f[columna(P.rango)]),
-      importe: numero(f[columna(P.importe)]), estado: texto(f[columna(P.estado)])
+      importe: numero(f[columna(P.importe)]), estado: sinEmojis(texto(f[columna(P.estado)])).trim()
     });
   }
 
@@ -315,10 +324,11 @@ export function bsTexto(n) {
   const v = Number(n) || 0, p = Math.abs(v).toFixed(2).split('.');
   return (v < 0 ? '−' : '') + 'Bs ' + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1];
 }
+const claveP = x => String(x.semana) + '|' + String(x.fechaPago) + '|' + String(x.importe);
 export function firmaNotif(r) {
   return {
     p: (r.pendientes || []).map(x => String(x.semana)),
-    h: (r.historial || []).length,
+    k: (r.historial || []).slice(0, 12).map(claveP),
     t: (r.tramites || []).slice(0, 6).map(t => t.numero + '=' + (t.estado || '') + '|' + (t.resolucion || ''))
   };
 }
@@ -333,8 +343,9 @@ export function eventosNotif(antes, ahora, r) {
       ? { titulo: 'Semana ' + nuevas[0] + ' registrada', cuerpo: 'Tienes ' + bsTexto(total) + ' por cobrar. Envía tu factura hasta el jueves a las 18:00.', link: 'pendientes' }
       : { titulo: nuevas.length + ' semanas nuevas por cobrar', cuerpo: 'Total ' + bsTexto(total) + '. Envía tus facturas hasta el jueves a las 18:00.', link: 'pendientes' });
   }
-  if (ahora.h > antes.h) {
-    const pagos = (r.historial || []).slice(0, ahora.h - antes.h);
+  // Pagos nuevos = los más recientes que no estaban la vez anterior (si antes no había lista, no se avisa)
+  const pagos = Array.isArray(antes.k) ? (r.historial || []).slice(0, 12).filter(x => !antes.k.includes(claveP(x))) : [];
+  if (pagos.length) {
     const total = pagos.reduce((s, x) => s + (Number(x.importe) || 0), 0);
     ev.push(pagos.length === 1
       ? { titulo: 'Recibiste tu pago', cuerpo: 'Semana ' + pagos[0].semana + ': ' + bsTexto(pagos[0].importe) + (pagos[0].fechaPago ? ', pagado el ' + pagos[0].fechaPago : '') + '.', link: 'historial' }
