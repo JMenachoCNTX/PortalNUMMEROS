@@ -289,23 +289,40 @@
   }
 
   /* ══════════ INICIO DE SESIÓN ══════════ */
+  /* Fotografía oficial "Los clásicos de los números" (las mismas del manual de marca) */
+  var P_ = { nombre: 'Pitágoras', rasgo: 'Los números del día a día' }, E_ = { nombre: 'Euclides', rasgo: 'El orden' }, A_ = { nombre: 'Arquímedes', rasgo: 'El equilibrio' };
+  function foto(img, quien, frase, pos) { return { img: img, nombre: quien.nombre, rasgo: quien.rasgo, frase: frase, pos: pos }; }
   var FOTOS = [
-    { img: 'euclides-laptop', nombre: 'Euclides', rasgo: 'El orden', frase: 'Tus facturas y trámites, bien ordenados.' },
-    { img: 'pitagoras-tablet', nombre: 'Pitágoras', rasgo: 'Los números del día a día', frase: 'Tus pagos de cada semana, siempre al día.' },
-    { img: 'arquimedes-balanza', nombre: 'Arquímedes', rasgo: 'El equilibrio', frase: 'Lo que facturas y lo que cobras, cuadrado.' },
-    { img: 'pitagoras-celular', nombre: 'Pitágoras', rasgo: 'Los números del día a día', frase: 'Tus números, desde el celular.' }
+    foto('pitagoras-tablet', P_, 'Tus pagos de cada semana, siempre al día.', '50% 30%'),
+    foto('pitagoras-celular', P_, 'Tus números, desde el celular.', '68% 30%'),
+    foto('pitagoras-senalando', P_, 'Aquí está todo lo que te toca cobrar.', '75% 22%'),
+    foto('pitagoras-inventario', P_, 'Cada semana registrada, en su lugar.', '62% 30%'),
+    foto('euclides-laptop', E_, 'Tus facturas y trámites, bien ordenados.', '55% 30%'),
+    foto('euclides-lentes', E_, 'Revisamos cada factura con lupa.', '58% 22%'),
+    foto('euclides-compas', E_, 'Mira cómo crecen tus cobros.', '72% 40%'),
+    foto('euclides-caminando', E_, 'Tu portal te acompaña a donde vayas.', '50% 22%'),
+    foto('arquimedes-balanza', A_, 'Lo que facturas y lo que cobras, cuadrado.', '50% 30%'),
+    foto('arquimedes-cafeteria', A_, 'Cuentas claras en cada venta.', '62% 35%'),
+    foto('los-tres-reunion', { nombre: 'Los clásicos', rasgo: 'Los tres juntos' }, 'Trabajando para que tus números cuadren.', '50% 40%')
   ];
   var FOTOS_OSCURO = [
-    { img: 'arquimedes-pensando', nombre: 'Arquímedes', rasgo: 'El equilibrio', frase: 'Lo que facturas y lo que cobras, cuadrado.' },
-    { img: 'arquimedes-eureka', nombre: 'Arquímedes', rasgo: 'El equilibrio', frase: '¡Eureka! Tu pago ya está registrado.', pos: '72% 40%' }
+    foto('arquimedes-pensando', A_, 'Lo que facturas y lo que cobras, cuadrado.', '62% 30%'),
+    foto('arquimedes-eureka', A_, '¡Eureka! Tu pago ya está registrado.', '72% 40%')
   ];
+  /* 4 fotos al azar para la pantalla de ingreso (el carrusel rota 4) */
+  function fotosAlAzar(lista, n) {
+    var l = lista.slice();
+    for (var i = l.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = l[i]; l[i] = l[j]; l[j] = t; }
+    while (l.length < n) l = l.concat(l);
+    return l.slice(0, n);
+  }
   function insignia(p) {
     return '<div class="nm-nombre"><i><img src="marca/logos/nummeros-isotipo-blanco.svg" alt=""></i>' + p.nombre + '<span>' + p.rasgo + '</span></div>';
   }
 
   function pintarLogin(error) {
     pararCarrusel();
-    var fotos = S.oscuro ? FOTOS_OSCURO.concat(FOTOS_OSCURO) : FOTOS;
+    var fotos = fotosAlAzar(S.oscuro ? FOTOS_OSCURO : FOTOS, 4);
     var cel = leer('nm_ultimo_celular') || '';
     app.innerHTML =
       '<div class="nm-login">' +
