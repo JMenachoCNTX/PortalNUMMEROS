@@ -438,7 +438,7 @@
       (DEMO ? '<div class="demo-cinta">Modo demostración: estos datos son de ejemplo. Los datos reales aparecen cuando se conecte Firebase.</div>' : '') +
       '<header class="hdr">' +
         '<button class="hdr-brand" data-ir="inicio" aria-label="Ir al inicio"><img src="marca/logos/nummeros-logotipo-horizontal-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS">' +
-        '<span class="hdr-emp"><b>Portal CONTAX</b>' + (S.admin ? 'Administrador' : esc(d.nombre || '')) + '</span></button>' +
+        '<span class="hdr-emp"><b>Portal CONTAX</b>' + (S.admin ? 'Administrador' : esc(d.nombre || '') + ' · ID ' + esc(d.id || '')) + '</span></button>' +
         '<div class="hdr-r">' +
           '<span class="hdr-sync">' + (ultimaSync() ? 'Datos al ' + fechaTexto(ultimaSync()) : '') + '</span>' +
           '<button class="hdr-btn solo" data-accion="tema" aria-label="Cambiar modo claro u oscuro">' + ic(S.oscuro ? 'sol' : 'luna') + '</button>' +
@@ -449,7 +449,10 @@
         '<nav class="nav" id="nav" aria-label="Menú"></nav>' +
         '<main class="cnt"><div class="cnt-in" id="pagina"></div></main>' +
       '</div>' +
-      '<nav class="tabbar" id="tabbar" aria-label="Menú"></nav>';
+      '<nav class="tabbar" id="tabbar" aria-label="Menú"></nav>' +
+      /* Franja con nombre completo e ID: así CONTAX sabe quién es cuando envían una captura */
+      '<div class="id-movil" aria-label="Tus datos">' + (S.admin ? '<b>ADMINISTRADOR</b>' :
+        '<b>' + esc(String(d.nombre || '').toUpperCase()) + '</b><span>ID ' + esc(d.id || '') + '</span>') + '</div>';
     var h = (location.hash || '').replace('#/', '');
     if (h === 'resumen') h = 'reporte';
     if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js?v=' + C.version, function () { ir(PAGINAS[h] ? h : 'admin', true); }); }

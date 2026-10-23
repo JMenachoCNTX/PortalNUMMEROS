@@ -307,6 +307,7 @@ details.faq div{padding:0 16px 16px;font-size:14px;line-height:1.7;color:var(--n
 
 /* Menú del celular */
 .tabbar{display:none}
+.id-movil{display:none}
 .hoja-mas{position:fixed;inset:0;z-index:1500}
 .hoja-mas .fondo{position:absolute;inset:0;background:rgba(5,31,32,.45)}
 .hoja-mas .hoja{position:absolute;left:0;right:0;bottom:0;background:var(--nm-superficie);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:8px 8px calc(14px + env(safe-area-inset-bottom))}
@@ -317,7 +318,7 @@ details.faq div{padding:0 16px 16px;font-size:14px;line-height:1.7;color:var(--n
   .nav{display:none}
   .hdr{padding-left:12px;padding-right:12px}
   .hdr-emp,.hdr-sync{display:none}
-  .cnt{padding:16px 14px calc(86px + env(safe-area-inset-bottom))}
+  .cnt{padding:16px 14px calc(118px + env(safe-area-inset-bottom))}
   .pg-tit h1{font-size:26px}
   .nm-inicio{grid-template-columns:1fr}
   .nm-inicio-foto{order:-1;min-height:0;height:210px}
@@ -336,6 +337,10 @@ details.faq div{padding:0 16px 16px;font-size:14px;line-height:1.7;color:var(--n
   .tabbar button.on i{background:var(--verde-100)}
   body.dark-mode .tabbar button.on i{background:var(--nm-campo)}
   .tabbar .ic{width:21px;height:21px}
+  .id-movil{display:flex;align-items:center;justify-content:center;gap:10px;position:fixed;left:0;right:0;bottom:calc(var(--alto-tabbar,62px) + env(safe-area-inset-bottom));z-index:901;height:30px;padding:0 14px;background:var(--verde-900);color:#fff;font:600 12.5px/1 var(--nm-display);letter-spacing:.04em;white-space:nowrap}
+  .id-movil b{overflow:hidden;text-overflow:ellipsis;font-weight:700}
+  .id-movil span{flex:none;padding:3px 8px;border-radius:999px;background:var(--verde-300);color:var(--verde-950)}
+  body.dark-mode .id-movil{background:var(--verde-800)}
 }
 
 /* Ventana emergente (avisos de CONTAX) */
@@ -371,7 +376,7 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .pie-version{text-align:center;font-size:12px;color:var(--nm-suave);padding:18px 0 6px}
 .pie-version img{height:14px;width:auto;opacity:.6;display:block;margin:0 auto 6px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--verde-800);color:#fff;padding:10px 16px;border-radius:var(--r-md);font:600 14px var(--nm-display);z-index:3000;box-shadow:var(--nm-sombra-alta)}
-@media (max-width:860px){.toast{bottom:calc(92px + env(safe-area-inset-bottom))}}
+@media (max-width:860px){.toast{bottom:calc(122px + env(safe-area-inset-bottom))}}
 
 /* ══ v3.1 · Reporte, administrador y asistente ══ */
 .segmento{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -554,7 +559,7 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 .chat-form input{flex:1;min-width:0;background:var(--nm-campo);border:1px solid var(--nm-borde-control);border-radius:999px;padding:10px 16px;font-size:15px;color:var(--nm-texto)}
 .chat-form .btn{border-radius:50%;width:44px;min-height:44px;padding:0;flex:none}
 @media (max-width:860px){
-  .chat-btn{bottom:calc(78px + env(safe-area-inset-bottom));right:14px;padding:11px 15px 11px 12px;font-size:14px}
+  .chat-btn{bottom:calc(108px + env(safe-area-inset-bottom));right:14px;padding:11px 15px 11px 12px;font-size:14px}
   .chat-panel{right:0;left:0;bottom:0;width:100%;height:calc(100% - 40px);height:calc(100dvh - 40px);border-radius:20px 20px 0 0}
   .chat-form{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
 }
@@ -569,13 +574,13 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.9"></script>
+<script src="config.js?v=3.10"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.9"></script>
-<script src="chat.js?v=3.9"></script>
-<script src="notificaciones.js?v=3.9"></script>
+<script src="app.js?v=3.10"></script>
+<script src="chat.js?v=3.10"></script>
+<script src="notificaciones.js?v=3.10"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.9',
+  version: '3.10',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
