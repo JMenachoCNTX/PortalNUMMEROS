@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.10',
+  version: '3.11',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -46,6 +46,6 @@ window.PORTAL = {
   reglasPago: [
     'Las facturas se reciben hasta el jueves antes de las 18:00. Si llegan después y están correctas, se pagan la semana siguiente.',
     'Los pagos los realiza Milthagor S.R.L., por lo general los viernes. A veces se adelantan al jueves después de las 19:00.',
-    'Envía tu factura en PDF al WhatsApp de facturas. Esa línea no atiende llamadas ni consultas.'
+    'Sube tu factura en PDF en «Mis facturas». Ahí ves al instante si fue aprobada u observada.'
   ]
 };

@@ -382,6 +382,7 @@
   function salir() {
     pararCarrusel();
     if (window.NM_CHAT) window.NM_CHAT.quitar();
+    if (window.NM_FACTURAS) window.NM_FACTURAS.salir();
     S.datos = null; S.avisosVistos = false;
     if (DEMO) { guardar('nm_demo_sesion', '0'); pintarLogin(); return; }
     auth.signOut();
@@ -392,6 +393,7 @@
     { sec: 'Mis pagos' },
     { id: 'inicio', t: 'Inicio', i: 'inicio' },
     { id: 'pendientes', t: 'Pendientes', i: 'pendientes' },
+    { id: 'facturas', t: 'Mis facturas', i: 'doc' },
     { id: 'historial', t: 'Historial', i: 'historial' },
     { id: 'reporte', t: 'Reporte', i: 'resumen' },
     { sec: 'Ayuda' },
@@ -406,7 +408,7 @@
   var TABS = [
     { id: 'inicio', t: 'Inicio', i: 'inicio' },
     { id: 'pendientes', t: 'Pendientes', i: 'pendientes' },
-    { id: 'historial', t: 'Historial', i: 'historial' },
+    { id: 'facturas', t: 'Facturas', i: 'doc' },
     { id: 'tramites', t: 'Trámites', i: 'tramites' },
     { id: 'mas', t: 'Más', i: 'mas' }
   ];
@@ -513,7 +515,7 @@
       return '<button class="nav-link' + (S.pagina === m.id ? ' active' : '') + '" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span>' + c + '</button>';
     }).join('') +
       '<div class="nav-pie"><img src="marca/logos/nummeros-logotipo-firma-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS by CONTAX">Portal CONTAX · v' + esc(C.version) + '</div>';
-    var enMas = ['reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
+    var enMas = ['historial', 'reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
     document.getElementById('tabbar').innerHTML = TABS.map(function (t) {
       var on = t.id === S.pagina || (t.id === 'mas' && enMas);
       return '<button class="' + (on ? 'on' : '') + '" ' + (t.id === 'mas' ? 'data-accion="mas"' : 'data-ir="' + t.id + '"') + '><i>' + ic(t.i) + '</i>' + t.t + '</button>';
@@ -622,7 +624,7 @@
         '<div class="card"><div class="h2">Datos para facturar</div>' +
           '<div class="dato"><span>Razón social</span><div><b>' + esc(C.facturacion.razonSocial) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.razonSocial) + '">Copiar</button></div></div>' +
           '<div class="dato"><span>NIT</span><div><b class="num">' + esc(C.facturacion.nit) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.nit) + '">Copiar</button></div></div>' +
-          '<div style="margin-top:14px"><a class="btn wa ancho" href="' + wa(C.whatsappFacturas) + '" target="_blank" rel="noopener">' + ic('whatsapp') + 'Enviar factura en PDF · ' + telVisible(C.whatsappFacturas) + '</a></div>' +
+          '<div style="margin-top:14px"><button class="btn ancho" data-ir="facturas">' + ic('doc') + 'Subir mi factura en PDF</button></div>' +
         '</div>' +
         '<div class="card"><div class="h2">Cuándo se paga</div><ul class="reglas">' +
           (C.reglasPago || []).map(function (t) { return '<li>' + ic('reloj') + '<span>' + esc(t) + '</span></li>'; }).join('') +
@@ -922,9 +924,9 @@
         '<div class="wa-card"><span class="et">Consultas</span><span class="tel">' + telVisible(C.whatsappGeneral) + '</span>' +
           '<p class="muted">Dudas sobre tus pagos, trámites, NIT, Matrícula de Comercio o ROE.</p>' +
           '<a class="btn wa" href="' + wa(C.whatsappGeneral, 'Hola CONTAX, soy ' + (S.datos.nombre || '') + ' (ID ' + (S.datos.id || '') + ').') + '" target="_blank" rel="noopener">' + ic('whatsapp') + 'Escribir por WhatsApp</a></div>' +
-        '<div class="wa-card"><span class="et">Solo facturas</span><span class="tel">' + telVisible(C.whatsappFacturas) + '</span>' +
-          '<p class="muted">Recibe únicamente facturas en PDF. No atiende llamadas ni consultas.</p>' +
-          '<a class="btn sec" href="' + wa(C.whatsappFacturas) + '" target="_blank" rel="noopener">' + ic('doc') + 'Enviar factura</a></div>' +
+        '<div class="wa-card"><span class="et">Facturas</span><span class="tel">Desde el portal</span>' +
+          '<p class="muted">Las facturas se suben en PDF en <b>Mis facturas</b>. Ahí ves al instante si fue aprobada u observada.</p>' +
+          '<button class="btn sec" data-ir="facturas">' + ic('doc') + 'Subir factura</button></div>' +
       '</div>' +
       '<div class="card" style="margin-top:14px"><div class="h2">Antes de escribirnos</div><ul class="reglas">' +
         '<li>' + ic('info') + '<span>Revisa <b>Preguntas</b>: ahí están las dudas más comunes.</span></li>' +
@@ -979,7 +981,7 @@
     var h = document.createElement('div');
     h.className = 'hoja-mas'; h.id = 'hojaMas';
     h.innerHTML = '<div class="fondo" data-accion="cerrarMas"></div><div class="hoja" role="dialog" aria-label="Más opciones"><div class="agarre"></div>' +
-      [['reporte', 'Reporte', 'resumen'], ['servicios', 'Ayuda con tu facturación', 'factura', 'servicios'], ['tutoriales', 'Tutoriales', 'video', 'tutoriales'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
+      [['historial', 'Historial', 'historial'], ['reporte', 'Reporte', 'resumen'], ['servicios', 'Ayuda con tu facturación', 'factura', 'servicios'], ['tutoriales', 'Tutoriales', 'video', 'tutoriales'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
         if (!seccionVisible(m[3])) return '';
         return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (seccionOculta(m[3]) ? '<span class="cuenta oculta">Oculta</span>' : '') + '</button>';
       }).join('') +
@@ -1155,9 +1157,9 @@
       preguntas: [
         { nombre: 'Pagos', preguntas: [
           { p: '¿Qué significa que mi pago está "Pendiente"?', r: 'Que tu pago ya está registrado y en proceso, pero todavía no fue abonado. Cuando se pague, pasa a tu Historial.' },
-          { p: 'Mi pago no aparece en el portal, ¿qué hago?', r: 'Revisa que hayas enviado tu factura en PDF al WhatsApp 75854243. Si pasaron más de 48 horas, abre un trámite de Soporte.' } ] },
+          { p: 'Mi pago no aparece en el portal, ¿qué hago?', r: 'Revisa en Mis facturas que tu factura esté Aprobada. Si pasaron más de 48 horas, abre un trámite de Soporte.' } ] },
         { nombre: 'Facturación', preguntas: [
-          { p: '¿A qué número envío mis facturas?', r: 'Al WhatsApp 75854243. Esa línea recibe únicamente facturas en PDF.' },
+          { p: '¿Dónde envío mis facturas?', r: 'En la sección Mis facturas del portal: subes el PDF y ves su estado al instante.' },
           { p: 'No tengo NIT, ¿pueden ayudarme?', r: 'Sí. CONTAX te ayuda a obtener tu NIT, Matrícula de Comercio y ROE. Escríbenos al WhatsApp 69021969.' } ] }
       ],
       encuesta: { titulo: '¿Cómo te atendemos?', texto: 'Tu opinión nos ayuda a mejorar. Son 2 minutos.', textoBoton: 'Calificar el servicio', url: '#' }

@@ -4,11 +4,31 @@ rules_version = '2';
 // - El administrador (cuenta con el permiso "admin") puede leer todo y editar
 //   anuncios, avisos y preguntas (publico/contenido) y subir imágenes.
 // - Los datos de pagos los escribe solo la sincronización (servidor).
+// - El equipo de CONTROL (cuentas de Google) administra todo desde controlnummeros.contaxbolivia.com.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function conSesion() { return request.auth != null; }
-    function esAdmin() { return conSesion() && request.auth.token.admin == true; }
+    // Equipo de CONTROL (panel controlnummeros.contaxbolivia.com): entra con su cuenta de Google.
+    function conGoogle() {
+      return conSesion() && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function esDueno() {
+      return conGoogle() && request.auth.token.email.lower() in ['info@contaxbolivia.com', 'jhonnymenacho04@gmail.com'];
+    }
+    function esEquipo() {
+      return esDueno() || (conGoogle()
+        && exists(/databases/$(database)/documents/equipo/$(request.auth.token.email.lower()))
+        && get(/databases/$(database)/documents/equipo/$(request.auth.token.email.lower())).data.activo == true);
+    }
+    function puedeEditar() {
+      return esDueno() || (esEquipo()
+        && get(/databases/$(database)/documents/equipo/$(request.auth.token.email.lower())).data.rol in ['admin', 'operador']);
+    }
+    // "admin" = la cuenta de administrador vieja del portal o alguien del equipo de CONTROL
+    function esAdmin() { return (conSesion() && request.auth.token.admin == true) || esEquipo(); }
+    function esRepartidor(uid) { return conSesion() && request.auth.uid == uid; }
 
     match /repartidores/{uid} {
       allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
@@ -30,7 +50,40 @@ service cloud.firestore {
 
     match /publico/{doc} {
       allow read: if conSesion();
-      allow write: if esAdmin() && doc == 'contenido';
+      allow write: if ((conSesion() && request.auth.token.admin == true) || puedeEditar()) && doc == 'contenido';
+    }
+
+    // Quiénes del equipo de CONTROL pueden entrar (documento = correo). Lo manejan los dueños.
+    match /equipo/{email} {
+      allow read: if esEquipo() || (conGoogle() && request.auth.token.email.lower() == email);
+      allow write: if esDueno();
+    }
+
+    // Facturas que sube cada repartidor desde el portal.
+    // facturas/{id}: los datos  ·  facturasPdf/{id}: el PDF (pesado, se abre solo cuando hace falta)
+    match /facturas/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      // El equipo también puede registrarla (por ejemplo, facturas emitidas por CONTAX)
+      allow create: if puedeEditar() || (conSesion() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.estado == 'recibida'
+        && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'semanas', 'numero', 'importe', 'fechaEmision', 'nitEmisor',
+             'nombreArchivo', 'tamano', 'paginas', 'estado', 'subido', 'fueraDeCorte', 'corte', 'nota'])
+        && request.resource.data.semanas is list && request.resource.data.semanas.size() <= 12
+        && request.resource.data.numero is string && request.resource.data.numero.size() <= 30
+        && request.resource.data.importe is number
+        && (!('nota' in request.resource.data) || request.resource.data.nota.size() <= 300));
+      // El repartidor puede anular su factura mientras siga "recibida"
+      allow update: if (puedeEditar() && request.resource.data.uid == resource.data.uid)
+        || (conSesion() && resource.data.uid == request.auth.uid && resource.data.estado == 'recibida'
+            && request.resource.data.estado == 'anulada'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'anulada']));
+      allow delete: if false;
+    }
+    match /facturasPdf/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow create: if (puedeEditar() || (conSesion() && request.resource.data.uid == request.auth.uid))
+        && request.resource.data.datos is string && request.resource.data.datos.size() < 1000000;
+      allow update, delete: if false;
     }
 
     // Imágenes subidas desde el panel (la sincronización las pasa a GitHub)
@@ -63,12 +116,17 @@ service cloud.firestore {
       allow read, create: if esAdmin();
     }
 
+    // Lo último que hizo la sincronización (para el tablero de CONTROL)
+    match /privado/estado {
+      allow read: if esEquipo();
+    }
+
     // Lo que venía de las hojas viejas (ChatLog, AvisosLeidos)
     match /archivo/{doc} {
       allow read: if esAdmin();
     }
 
-    // Todo lo demás (por ejemplo privado/estado) queda cerrado.
+    // Todo lo demás (por ejemplo privado/notif-*) queda cerrado.
     match /{document=**} {
       allow read, write: if false;
     }

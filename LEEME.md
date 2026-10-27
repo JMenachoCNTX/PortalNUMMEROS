@@ -79,6 +79,18 @@ function doGet() {
 
 ---
 
+## Panel CONTROL (v3.11)
+El equipo ahora maneja todo desde **CONTROL** (repositorio `CONTROL-NUMMEROS`, proyecto Firebase `control--nummeros`), entrando con su cuenta de Google.
+- Los dueños (`info@contaxbolivia.com`, `jhonnymenacho04@gmail.com`) tienen acceso total; al resto se le da acceso desde CONTROL → Equipo (colección `equipo` de este proyecto).
+- El acceso con Google ya está activado en este proyecto y los dominios de CONTROL están autorizados.
+- El panel de administrador de abajo sigue funcionando por ahora; cuando el equipo se acostumbre a CONTROL se puede quitar.
+
+## Mis facturas (v3.11)
+- El repartidor sube su factura en PDF (hasta 700 KB) en **Mis facturas**, marca las semanas que cubre y ve el estado: Recibida, Aprobada, Observada (con motivo) o Emitida por CONTAX.
+- Corte: **jueves 18:00** (hora de Bolivia). Lo que llega después entra al pago siguiente.
+- Se guardan en Firestore: `facturas` (datos) y `facturasPdf` (el PDF). No hace falta el plan Blaze.
+- Ya no se pide mandar la factura por WhatsApp.
+
 ## Panel de administrador (v3.1)
 1. Entra al portal con el usuario de prueba: celular `78015123`, ID `1234`.
 2. Ya adentro, el portal pide la **clave de administrador** (secreto `ADMIN_CLAVE` en GitHub; mínimo 10 caracteres).
@@ -120,7 +132,8 @@ Los formularios, la encuesta y la configuración de trámites están en `sync/co
 | `index.html` | La página y su diseño (marca NUMMEROS) |
 | `app.js` | Lo que hace la página |
 | `config.js` | Datos de Firebase, WhatsApp, NIT y reglas de pago |
-| `firestore.rules` | Seguridad: cada repartidor solo ve lo suyo |
+| `firestore.rules` | Seguridad: cada repartidor solo ve lo suyo; el equipo de CONTROL ve todo |
+| `facturas.js` | Mis facturas: subir la factura en PDF y ver su estado |
 | `sync/` | El robot que copia Sheets → Firebase |
 | `.github/workflows/sincronizar.yml` | Cuándo corre el robot (cada 15 min) |
 | `marca/` | Logos, letras, íconos y estatuas de NUMMEROS |

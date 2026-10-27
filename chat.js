@@ -35,7 +35,7 @@
     l.push('');
     l.push('INFORMACIÓN DEL PORTAL');
     l.push('Facturar a: ' + C.facturacion.razonSocial + ', NIT ' + C.facturacion.nit + '.');
-    l.push('WhatsApp de consultas: ' + N.telVisible(C.whatsappGeneral) + '. WhatsApp solo para enviar facturas en PDF (no atiende consultas ni llamadas): ' + N.telVisible(C.whatsappFacturas) + '.');
+    l.push('WhatsApp de consultas: ' + N.telVisible(C.whatsappGeneral) + '. Las facturas en PDF se suben en la sección «Mis facturas» del portal (ya no por WhatsApp); ahí ven si fue aprobada u observada. Corte: jueves 18:00.');
     (C.reglasPago || []).forEach(function (t) { l.push('- ' + t); });
     l.push('Los datos del portal se actualizan cada 15 minutos. Para problemas con un pago se abre un trámite de Soporte en "Mis trámites".');
     (p.formularios || []).forEach(function (f) { l.push('Formulario disponible en "Mis trámites": ' + f.nombre + (f.descripcion ? ' (' + f.descripcion + ')' : '')); });

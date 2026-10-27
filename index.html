@@ -419,6 +419,14 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 }
 .modal-caja.fm{max-width:560px}
 .fm .modal-cuerpo{padding-top:16px}
+/* Mis facturas */
+.fm-campo label.fac-sem{font:inherit;letter-spacing:0}
+.fac-sem{display:flex!important;align-items:center;gap:10px;border:1px solid var(--nm-borde);border-radius:var(--r-md);padding:10px 12px;margin-bottom:8px;cursor:pointer;background:var(--nm-superficie)}
+.fac-sem:has(input:checked){border-color:var(--nm-acento);background:var(--nm-campo)}
+.fm-campo .fac-sem input{width:18px;height:18px;padding:0;margin:0;accent-color:var(--nm-acento);flex:none}
+.fac-sem span{flex:1;text-align:left;min-width:0;font-size:14px}
+.fac-sem em{font:600 15px var(--nm-display);font-style:normal;font-variant-numeric:tabular-nums}
+.fac-motivo{font-size:12px;color:var(--nm-error);margin-top:4px;max-width:260px}
 .fm-campo{margin-bottom:14px}
 .fm-campo label{display:block;font:600 13px var(--nm-display);letter-spacing:.02em;margin-bottom:5px}
 .fm-campo input,.fm-campo select,.fm-campo textarea{width:100%;background:var(--nm-campo);border:1px solid var(--nm-borde-control);border-radius:var(--r-md);padding:10px 12px;font:15px/1.5 var(--nm-cuerpo);color:var(--nm-texto)}
@@ -574,13 +582,14 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.10"></script>
+<script src="config.js?v=3.11"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.10"></script>
-<script src="chat.js?v=3.10"></script>
-<script src="notificaciones.js?v=3.10"></script>
+<script src="app.js?v=3.11"></script>
+<script src="facturas.js?v=3.11"></script>
+<script src="chat.js?v=3.11"></script>
+<script src="notificaciones.js?v=3.11"></script>
 </body>
 </html>
