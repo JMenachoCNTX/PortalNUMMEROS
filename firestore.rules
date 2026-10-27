@@ -4,30 +4,19 @@ rules_version = '2';
 // - El administrador (cuenta con el permiso "admin") puede leer todo y editar
 //   anuncios, avisos y preguntas (publico/contenido) y subir imágenes.
 // - Los datos de pagos los escribe solo la sincronización (servidor).
-// - El equipo de CONTROL (cuentas de Google) administra todo desde controlnummeros.contaxbolivia.com.
+// - El equipo de CONTROL (usuarios del Panel NUMMEROS) administra todo desde el panel CONTROL.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function conSesion() { return request.auth != null; }
-    // Equipo de CONTROL (panel controlnummeros.contaxbolivia.com): entra con su cuenta de Google.
-    function conGoogle() {
-      return conSesion() && request.auth.token.email_verified == true
-        && request.auth.token.firebase.sign_in_provider == 'google.com';
-    }
-    function esDueno() {
-      return conGoogle() && request.auth.token.email.lower() in ['info@contaxbolivia.com', 'jhonnymenacho04@gmail.com'];
-    }
-    function esEquipo() {
-      return esDueno() || (conGoogle()
-        && exists(/databases/$(database)/documents/equipo/$(request.auth.token.email.lower()))
-        && get(/databases/$(database)/documents/equipo/$(request.auth.token.email.lower())).data.activo == true);
-    }
-    function puedeEditar() {
-      return esDueno() || (esEquipo()
-        && get(/databases/$(database)/documents/equipo/$(request.auth.token.email.lower())).data.rol in ['admin', 'operador']);
-    }
+    // Equipo de CONTROL: entra con su usuario del Panel NUMMEROS. El Panel pone el permiso en
+    // la cuenta (nm = es del equipo, rol = admin | operador | lectura); el navegador no lo puede cambiar.
+    function equipoNm() { return conSesion() && request.auth.token.get('nm', false) == true; }
+    function rolEq() { return request.auth.token.get('rol', ''); }
+    function esEquipo() { return equipoNm() && rolEq() in ['admin', 'operador', 'lectura']; }
+    function puedeEditar() { return equipoNm() && rolEq() in ['admin', 'operador']; }
     // "admin" = la cuenta de administrador vieja del portal o alguien del equipo de CONTROL
-    function esAdmin() { return (conSesion() && request.auth.token.admin == true) || esEquipo(); }
+    function esAdmin() { return (conSesion() && request.auth.token.get('admin', false) == true) || esEquipo(); }
     function esRepartidor(uid) { return conSesion() && request.auth.uid == uid; }
 
     match /repartidores/{uid} {
@@ -50,13 +39,7 @@ service cloud.firestore {
 
     match /publico/{doc} {
       allow read: if conSesion();
-      allow write: if ((conSesion() && request.auth.token.admin == true) || puedeEditar()) && doc == 'contenido';
-    }
-
-    // Quiénes del equipo de CONTROL pueden entrar (documento = correo). Lo manejan los dueños.
-    match /equipo/{email} {
-      allow read: if esEquipo() || (conGoogle() && request.auth.token.email.lower() == email);
-      allow write: if esDueno();
+      allow write: if ((conSesion() && request.auth.token.get('admin', false) == true) || puedeEditar()) && doc == 'contenido';
     }
 
     // Facturas que sube cada repartidor desde el portal.

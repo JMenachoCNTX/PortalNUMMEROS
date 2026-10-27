@@ -80,9 +80,8 @@ function doGet() {
 ---
 
 ## Panel CONTROL (v3.11)
-El equipo ahora maneja todo desde **CONTROL** (repositorio `CONTROL-NUMMEROS`, proyecto Firebase `control--nummeros`), entrando con su cuenta de Google.
-- Los dueños (`info@contaxbolivia.com`, `jhonnymenacho04@gmail.com`) tienen acceso total; al resto se le da acceso desde CONTROL → Equipo (colección `equipo` de este proyecto).
-- El acceso con Google ya está activado en este proyecto y los dominios de CONTROL están autorizados.
+El equipo ahora maneja todo desde **CONTROL** (repositorio `CONTROL-NUMMEROS`, proyecto Firebase `control--nummeros`), entrando con **su usuario del Panel NUMMEROS**.
+- El permiso viaja en la cuenta (custom claims `nm` y `rol`), lo pone el puente del Panel. Se administra en Panel → Usuarios → columna CONTROL.
 - El panel de administrador de abajo sigue funcionando por ahora; cuando el equipo se acostumbre a CONTROL se puede quitar.
 
 ## Mis facturas (v3.11)
