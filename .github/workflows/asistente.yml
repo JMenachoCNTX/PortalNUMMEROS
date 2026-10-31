@@ -38,6 +38,7 @@ jobs:
           TOKEN_CRUDO: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CUENTA_CRUDA: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLAVE_CRUDA: ${{ secrets.DEEPSEEK_API_KEY }}
+          GEMINI_CRUDA: ${{ secrets.GEMINI_API_KEY }}
         run: |
           # Limpia los secretos por si se pegaron con texto de más (comandos, espacios, saltos de línea)
           T=$(printf '%s' "$TOKEN_CRUDO" | grep -oE 'Bearer[[:space:]]+[A-Za-z0-9_-]{30,}' | head -1 | awk '{print $2}')
@@ -60,6 +61,15 @@ jobs:
           cat salida.txt
           URL=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' salida.txt | head -1)
           printf '%s' "$DEEPSEEK_API_KEY" | npx --yes wrangler@3 secret put DEEPSEEK_API_KEY > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo guardar la clave de DeepSeek"; exit 1; }
+          # Lector de facturas (opcional): la clave de Gemini es la misma del Panel (empieza con AIza)
+          GEMINI_API_KEY=$(printf '%s' "$GEMINI_CRUDA" | grep -oE 'AIza[A-Za-z0-9_-]{35}' | head -1)
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "::add-mask::$GEMINI_API_KEY"
+            printf '%s' "$GEMINI_API_KEY" | npx --yes wrangler@3 secret put GEMINI_API_KEY > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo guardar la clave de Gemini"; exit 1; }
+            echo "::notice::Lector de facturas con Gemini activado."
+          else
+            echo "::warning::Falta el secreto GEMINI_API_KEY: el lector de facturas no funcionará hasta agregarlo."
+          fi
           echo "::notice::Asistente publicado en $URL"
 
       - name: Probar el asistente de punta a punta
