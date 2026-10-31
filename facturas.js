@@ -139,8 +139,16 @@
     var pa = pal(a), pb = pal(b); if (!pa.length || !pb.length) return null;
     return pa.filter(function (w) { return pb.indexOf(w) >= 0; }).length >= Math.min(2, pa.length, pb.length);
   }
-  /* Semanas cuyo total es exactamente el importe de la factura (la combinación con más semanas) */
-  function elegirSemanas(libres, importe) {
+  /* Semanas cuyo total es exactamente el importe de la factura. Primero las que nombra la descripción
+     («SEM 43»); si no, la combinación con más semanas */
+  function numSem(t) { var m = String(t || '').replace(/20\d\d/, '').match(/(\d{1,2})/); return m ? Number(m[1]) : 0; }
+  function elegirSemanas(libres, importe, nombradas) {
+    var dichas = (nombradas || []).map(Number).filter(Boolean);
+    if (dichas.length) {
+      var esas = libres.filter(function (p) { return dichas.indexOf(numSem(p.semana)) >= 0; });
+      var suma = esas.reduce(function (t, p) { return t + (Number(p.importe) || 0); }, 0);
+      if (esas.length && Math.abs(suma - importe) <= 0.05) return esas;
+    }
     var n = Math.min(libres.length, 12), mejor = null;
     for (var m = 1; m < (1 << n); m++) {
       var s = 0, c = 0;
@@ -166,7 +174,7 @@
     punto(d.numeroFactura && !repetida, 'Factura N.º ' + d.numeroFactura, d.numeroFactura ? 'Ya subiste la factura N.º ' + d.numeroFactura + '.' : 'No se encontró el número de la factura en el PDF.');
     var hoy = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
     punto(d.fechaEmision && d.fechaEmision <= hoy, 'Emitida el ' + fechaCorta(d.fechaEmision), 'No se encontró la fecha de emisión o es una fecha futura.');
-    var sem = d.importeTotal > 0 ? elegirSemanas(libres, d.importeTotal) : null;
+    var sem = d.importeTotal > 0 ? elegirSemanas(libres, d.importeTotal, d.semanas) : null;
     punto(sem, bs(d.importeTotal) + ' = ' + (sem || []).map(function (x) { return x.semana; }).join(' + '),
       'El importe de tu factura (' + bs(d.importeTotal) + ') no coincide con tus semanas pendientes (' + libres.map(function (x) { return x.semana + ': ' + bs(x.importe); }).join(' · ') + '). Emite la factura por el importe exacto de una o varias semanas.');
     return { puntos: ch, semanas: sem || [], todoBien: ch.every(function (x) { return x.ok; }) };

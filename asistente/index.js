@@ -62,11 +62,12 @@ Recibes el PDF de una factura que un repartidor emitió por sus servicios. Extra
 - nitEmisor: NIT de quien EMITE la factura (arriba, junto a su nombre). Solo dígitos.
 - razonSocialEmisor: nombre o razón social de quien emite.
 - numeroFactura: número de la factura ("FACTURA N°" / "N° FACTURA"). Solo dígitos.
-- codigoAutorizacion: el CUF ("CÓD. AUTORIZACIÓN" o "CUF"), tal cual, en mayúsculas y sin espacios.
-- fechaEmision: fecha de emisión en formato AAAA-MM-DD.
+- codigoAutorizacion: el CUF ("CÓD. AUTORIZACIÓN" o "CUF"). Suele venir partido en varias líneas: únelas sin espacios, en mayúsculas.
+- fechaEmision: fecha de emisión ("Fecha:", puede traer hora) en formato AAAA-MM-DD.
 - nitComprador: NIT/CI/CEX del cliente ("NIT/CI/CEX" del comprador). Solo dígitos.
 - razonSocialComprador: "Nombre/Razón Social" del cliente.
 - importeTotal: el total a pagar o "MONTO A PAGAR" / "IMPORTE BASE CRÉDITO FISCAL" si es el único total, como número (punto decimal).
+- semanas: números de semana que menciona la descripción (por ejemplo "SERVICIOS DE DELIVERY SEM 43" → ["43"]; "SEM 42 Y 43" → ["42","43"]). Vacío si no menciona ninguna.
 - anulada: true solo si el PDF dice claramente ANULADA.
 Si un dato no aparece, déjalo vacío (o 0 en importeTotal). No inventes nada.`;
 const ESQUEMA_FACTURA = {
@@ -74,7 +75,7 @@ const ESQUEMA_FACTURA = {
   properties: {
     esFactura: { type: 'BOOLEAN' }, nitEmisor: { type: 'STRING' }, razonSocialEmisor: { type: 'STRING' }, numeroFactura: { type: 'STRING' },
     codigoAutorizacion: { type: 'STRING' }, fechaEmision: { type: 'STRING' }, nitComprador: { type: 'STRING' }, razonSocialComprador: { type: 'STRING' },
-    importeTotal: { type: 'NUMBER' }, anulada: { type: 'BOOLEAN' }
+    importeTotal: { type: 'NUMBER' }, semanas: { type: 'ARRAY', items: { type: 'STRING' } }, anulada: { type: 'BOOLEAN' }
   },
   required: ['esFactura', 'nitEmisor', 'razonSocialEmisor', 'numeroFactura', 'fechaEmision', 'nitComprador', 'razonSocialComprador', 'importeTotal']
 };
@@ -102,7 +103,8 @@ async function leerFactura(pedido, env, cab) {
       esFactura: d.esFactura !== false, nitEmisor: dig(d.nitEmisor), razonSocialEmisor: String(d.razonSocialEmisor || '').trim().slice(0, 160),
       numeroFactura: dig(d.numeroFactura), codigoAutorizacion: String(d.codigoAutorizacion || '').replace(/\s+/g, '').toUpperCase().slice(0, 80),
       fechaEmision: /^\d{4}-\d{2}-\d{2}$/.test(d.fechaEmision || '') ? d.fechaEmision : '', nitComprador: dig(d.nitComprador),
-      razonSocialComprador: String(d.razonSocialComprador || '').trim().slice(0, 160), importeTotal: Math.round((Number(d.importeTotal) || 0) * 100) / 100, anulada: d.anulada === true
+      razonSocialComprador: String(d.razonSocialComprador || '').trim().slice(0, 160), importeTotal: Math.round((Number(d.importeTotal) || 0) * 100) / 100,
+      semanas: (Array.isArray(d.semanas) ? d.semanas : []).map(dig).filter(Boolean).slice(0, 12), anulada: d.anulada === true
     }, modelo: m }, 200, cab);
   }
   return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.' }, 502, cab);
