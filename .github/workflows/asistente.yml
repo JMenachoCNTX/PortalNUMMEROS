@@ -63,6 +63,7 @@ jobs:
           printf '%s' "$DEEPSEEK_API_KEY" | npx --yes wrangler@3 secret put DEEPSEEK_API_KEY > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo guardar la clave de DeepSeek"; exit 1; }
           # Lector de facturas (opcional): la clave de Gemini es la misma del Panel (empieza con AIza)
           GEMINI_API_KEY=$(printf '%s' "$GEMINI_CRUDA" | grep -oE 'AIza[A-Za-z0-9_-]{35}' | head -1)
+          [ -z "$GEMINI_API_KEY" ] && GEMINI_API_KEY=$(printf '%s' "$GEMINI_CRUDA" | grep -oE '[A-Za-z0-9._-]{30,}' | head -1)
           if [ -n "$GEMINI_API_KEY" ]; then
             echo "::add-mask::$GEMINI_API_KEY"
             printf '%s' "$GEMINI_API_KEY" | npx --yes wrangler@3 secret put GEMINI_API_KEY > salida.txt 2>&1 || { cat salida.txt; avisar "No se pudo guardar la clave de Gemini"; exit 1; }
