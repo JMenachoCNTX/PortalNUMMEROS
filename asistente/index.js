@@ -82,18 +82,21 @@ const ESQUEMA_FACTURA = {
 async function leerFactura(pedido, env, cab) {
   const pdf = String(pedido.pdf || '').replace(/^data:[^,]*,/, '');
   if (!pdf || pdf.length > 1400000) return respuesta({ error: 'El PDF es muy grande o está vacío (máximo 1 MB).' }, 400, cab);
-  const modelos = [env.MODELO_GEMINI, 'gemini-flash-latest', 'gemini-flash-lite-latest'].filter(Boolean);
+  // Flash-Lite primero: lee bien las facturas del SIAT y responde en segundos (Flash «piensa» y puede tardar más de un minuto)
+  const modelos = [env.MODELO_GEMINI, 'gemini-flash-lite-latest', 'gemini-flash-latest'].filter(Boolean);
   let ultimo = '';
   for (const m of modelos) {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
-      method: 'POST',
+    const corte = new AbortController(), reloj = setTimeout(() => corte.abort(), 40000);
+    let r;
+    try { r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
+      method: 'POST', signal: corte.signal,
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
       body: JSON.stringify({
         contents: [{ parts: [{ inline_data: { mime_type: 'application/pdf', data: pdf } }, { text: 'Extrae los datos de esta factura.' }] }],
         systemInstruction: { parts: [{ text: LECTOR }] },
         generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: ESQUEMA_FACTURA }
       })
-    });
+    }); } catch (e) { ultimo = 'tiempo'; console.log('Gemini', m, 'sin respuesta en 40 s'); continue; } finally { clearTimeout(reloj); }
     if (!r.ok) { ultimo = r.status + ' ' + (await r.text()).slice(0, 200); console.log('Gemini', m, ultimo); continue; }
     const j = await r.json();
     const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(p => p.text || '').join('');
