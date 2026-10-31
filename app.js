@@ -672,7 +672,8 @@
           ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Semana</th><th>Período</th><th>Estado</th><th class="monto">Importe</th></tr></thead><tbody>' +
             lista.map(function (p) {
               return '<tr><td data-et="Semana"><b class="num">' + esc(p.semana) + '</b></td><td data-et="Período">' + esc(p.rango) + '</td>' +
-                '<td data-et="Estado">' + chipPendiente(p.estado) + (p.tipo && notaSemana(p) ? '<small class="muted" style="display:block;margin-top:4px">' + esc(notaSemana(p)) + '</small>' : '') + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>';
+                '<td data-et="Estado">' + chipPendiente(p.estado) + (p.tipo && notaSemana(p) ? '<small class="muted" style="display:block;margin-top:4px">' + esc(notaSemana(p)) + '</small>' : '') +
+                  (!p.enPlanilla ? '<button class="btn sec chico" data-ir="facturas" style="margin-top:6px">' + ic('doc') + 'Adjuntar factura</button>' : '') + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>';
             }).join('') +
             '</tbody><tfoot><tr><td colspan="3">Total por cobrar</td><td class="monto" data-et="Total por cobrar">' + bs(r.total) + '</td></tr></tfoot></table></div>'
           : vacio('No tienes pagos pendientes', 'Cuando registremos una semana nueva aparecerá aquí.')) +

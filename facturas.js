@@ -91,7 +91,7 @@
           '<div class="dato"><span>NIT</span><div><b class="num">' + esc(C.facturacion.nit) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.nit) + '">Copiar</button></div></div>' +
           '<ul class="reglas" style="margin-top:12px">' +
             '<li>' + ic('doc') + '<span>Solo sube el PDF: leemos solos el número, la fecha, el NIT y el importe.</span></li>' +
-            '<li>' + ic('escudo') + '<span>La factura debe estar a nombre de MILTHAGOR, emitida con tu NIT registrado' + (S.perfil ? ' (<b class="num">' + esc(S.perfil.nit) + '</b>)' : '') + ' y por el importe exacto de una o varias de tus semanas pendientes.</span></li>' +
+            '<li>' + ic('escudo') + '<span><b>Una factura por cada pago</b>, por el importe exacto de ese pago, a nombre de MILTHAGOR y emitida con tu NIT registrado' + (S.perfil ? ' (<b class="num">' + esc(S.perfil.nit) + '</b>)' : '') + '. Adjúntala con el botón de ese pago.</span></li>' +
             '<li>' + ic('info') + '<span>Si una factura queda <b>Observada</b>, lee el motivo, corrígela y súbela de nuevo.</span></li>' +
           '</ul>' +
         '</div>' +
@@ -106,17 +106,19 @@
     var ya = semanasConFactura();
     return ((S.datos || {}).pendientes || []).filter(function (p) { return !ya[p.semana] && !p.enPlanilla; });
   }
+  /* Un pago = una factura. Cada pago pendiente tiene su botón «Adjuntar factura»; la factura se revisa
+     contra ESE pago (mismo importe exacto). Así cada pago del banco tiene su factura y la conciliación es directa. */
   function formulario(libres) {
-    return '<form id="fmFactura" novalidate>' +
-      '<div class="fm-campo"><label>Tus semanas por facturar</label>' +
-        libres.map(function (p) { return '<div class="fac-sem"><span><b class="num">' + esc(p.semana) + '</b> · ' + esc(p.rango || '') + '</span><em class="num">' + bs(p.importe) + '</em></div>'; }).join('') +
-      '</div>' +
-      '<div class="fm-campo"><label for="facPdf">PDF de tu factura</label><input id="facPdf" type="file" accept="application/pdf,.pdf" required>' +
-        '<small>El PDF que descargas del SIAT, hasta 700 KB. No tienes que escribir nada: leemos los datos solos.</small></div>' +
-      '<div id="facLeida"></div>' +
-      '<div class="nm-login-err" id="facErr" role="alert"></div>' +
-      '<button class="btn ancho" type="submit" id="facBtn" disabled>' + ic('descargar') + 'Enviar factura</button>' +
-    '</form>';
+    return '<div id="fmFactura">' +
+      libres.map(function (p, i) {
+        return '<div class="fac-pago" data-i="' + i + '">' +
+          '<div class="fac-sem"><span><b class="num">' + esc(p.semana) + '</b> · ' + esc(p.rango || '') + '</span><em class="num">' + bs(p.importe) + '</em>' +
+            '<button class="btn chico" type="button" data-adjuntar="' + i + '">' + ic('doc') + 'Adjuntar factura</button></div>' +
+          '<div class="fac-leida" id="facLeida' + i + '"></div></div>';
+      }).join('') +
+      '<input id="facPdf" type="file" accept="application/pdf,.pdf" hidden>' +
+      '<p class="muted" style="font-size:13px">Una factura por cada pago, por el importe exacto de ese pago. Sube el PDF del SIAT (hasta 700 KB): leemos los datos solos.</p>' +
+    '</div>';
   }
   function tabla() {
     return '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Enviada</th><th>N.º</th><th>Semanas</th><th>Estado</th><th class="monto">Importe</th><th></th></tr></thead><tbody>' +
@@ -139,27 +141,8 @@
     var pa = pal(a), pb = pal(b); if (!pa.length || !pb.length) return null;
     return pa.filter(function (w) { return pb.indexOf(w) >= 0; }).length >= Math.min(2, pa.length, pb.length);
   }
-  /* Semanas cuyo total es exactamente el importe de la factura. Primero las que nombra la descripción
-     («SEM 43»); si no, la combinación con más semanas */
-  function numSem(t) { var m = String(t || '').replace(/20\d\d/, '').match(/(\d{1,2})/); return m ? Number(m[1]) : 0; }
-  function elegirSemanas(libres, importe, nombradas) {
-    var dichas = (nombradas || []).map(Number).filter(Boolean);
-    if (dichas.length) {
-      var esas = libres.filter(function (p) { return dichas.indexOf(numSem(p.semana)) >= 0; });
-      var suma = esas.reduce(function (t, p) { return t + (Number(p.importe) || 0); }, 0);
-      if (esas.length && Math.abs(suma - importe) <= 0.05) return esas;
-    }
-    var n = Math.min(libres.length, 12), mejor = null;
-    for (var m = 1; m < (1 << n); m++) {
-      var s = 0, c = 0;
-      for (var i = 0; i < n; i++) if (m & (1 << i)) { s += Number(libres[i].importe) || 0; c++; }
-      if (Math.abs(s - importe) <= 0.05 && (!mejor || c > mejor.c)) mejor = { m: m, c: c };
-    }
-    if (!mejor) return null;
-    return libres.filter(function (p, i) { return i < n && (mejor.m & (1 << i)); });
-  }
   /* Revisión de lo que leyó la IA. Cada punto: ok + texto (si falla, el texto explica qué corregir) */
-  function revisar(d, libres) {
+  function revisar(d, pago, libres) {
     var p = S.perfil || {}, mil = C.facturacion, ch = [];
     var punto = function (ok, bien, mal) { ch.push({ ok: !!ok, t: ok ? bien : mal }); };
     punto(d.esFactura && !d.anulada, 'Es una factura del SIAT', d.anulada ? 'La factura figura ANULADA.' : 'El archivo no parece una factura del SIAT. Sube el PDF que descargas del SIAT, no una foto ni un comprobante.');
@@ -174,10 +157,15 @@
     punto(d.numeroFactura && !repetida, 'Factura N.º ' + d.numeroFactura, d.numeroFactura ? 'Ya subiste la factura N.º ' + d.numeroFactura + '.' : 'No se encontró el número de la factura en el PDF.');
     var hoy = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
     punto(d.fechaEmision && d.fechaEmision <= hoy, 'Emitida el ' + fechaCorta(d.fechaEmision), 'No se encontró la fecha de emisión o es una fecha futura.');
-    var sem = d.importeTotal > 0 ? elegirSemanas(libres, d.importeTotal, d.semanas) : null;
-    punto(sem, bs(d.importeTotal) + ' = ' + (sem || []).map(function (x) { return x.semana; }).join(' + '),
-      'El importe de tu factura (' + bs(d.importeTotal) + ') no coincide con tus semanas pendientes (' + libres.map(function (x) { return x.semana + ': ' + bs(x.importe); }).join(' · ') + '). Emite la factura por el importe exacto de una o varias semanas.');
-    return { puntos: ch, semanas: sem || [], todoBien: ch.every(function (x) { return x.ok; }) };
+    var igual = Math.abs((Number(d.importeTotal) || 0) - (Number(pago.importe) || 0)) <= 0.05;
+    var otro = !igual && (libres || []).filter(function (x) { return x !== pago && Math.abs((Number(x.importe) || 0) - (Number(d.importeTotal) || 0)) <= 0.05; })[0];
+    var total = (libres || []).reduce(function (t, x) { return t + (Number(x.importe) || 0); }, 0);
+    punto(igual, bs(d.importeTotal) + ' = pago de la ' + pago.semana,
+      'Esta factura es por ' + bs(d.importeTotal) + ', pero el pago de la ' + pago.semana + ' es de ' + bs(pago.importe) + '. ' +
+      (otro ? 'Parece ser la factura del pago de la ' + otro.semana + ': adjúntala en ese pago.' :
+       (libres || []).length > 1 && Math.abs(total - (Number(d.importeTotal) || 0)) <= 0.05 ? 'No se acepta una factura por varias semanas: emite una factura por cada pago.' :
+       'Emite una factura por el importe exacto de este pago.'));
+    return { puntos: ch, semanas: igual ? [pago] : [], todoBien: ch.every(function (x) { return x.ok; }) };
   }
   function pintarLeida(d, rv) {
     var dato = function (t, v) { return '<div class="dato"><span>' + t + '</span><div><b>' + esc(v || '—') + '</b></div></div>'; };
@@ -189,13 +177,15 @@
       '<ul class="reglas" style="margin-top:12px">' + rv.puntos.map(function (x) {
         return '<li style="color:' + (x.ok ? 'inherit' : 'var(--nm-error)') + '">' + ic(x.ok ? 'escudo' : 'alerta') + '<span>' + esc(x.t) + '</span></li>';
       }).join('') + '</ul>' +
-      (rv.todoBien ? '' : '<p class="muted" style="margin-top:10px">Corrige la factura en el SIAT y vuelve a elegir el PDF.</p>') +
+      (rv.todoBien ? '<button class="btn ancho" type="button" data-enviar style="margin-top:12px">' + ic('descargar') + 'Enviar factura</button>' :
+        '<p class="muted" style="margin-top:10px">Corrige la factura en el SIAT y vuelve a adjuntarla.</p>') +
+      '<div class="nm-login-err" data-err role="alert"></div>' +
     '</div>';
   }
   /* Le pide a la IA los datos del PDF (en demostración devuelve datos de ejemplo) */
-  function leerConIA(dataUrl) {
+  function leerConIA(dataUrl, pago) {
     if (N.DEMO) {
-      var p = (semanasLibres()[0] || { importe: 100 });
+      var p = pago || { importe: 100 };
       return Promise.resolve({ modelo: 'demo', datos: { esFactura: true, nitEmisor: (S.perfil || {}).nit || '1234567', razonSocialEmisor: (S.perfil || {}).razonSocial || (S.datos || {}).nombre || '',
         numeroFactura: String(1000 + Math.floor(Math.random() * 900)), codigoAutorizacion: 'DEMO', fechaEmision: new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10),
         nitComprador: C.facturacion.nit, razonSocialComprador: C.facturacion.razonSocial, importeTotal: Number(p.importe) || 0, anulada: false } });
@@ -245,46 +235,46 @@
     var bn = pg.querySelector('[data-pedir-nit]');
     if (bn) bn.addEventListener('click', function () { N.pedirNit(function () { N.ir('facturas', true); }); });
     if (!fm) return;
-    var leida = null, caja = fm.querySelector('#facLeida'), err = fm.querySelector('#facErr'), btn = fm.querySelector('#facBtn');
-    fm.querySelector('#facPdf').addEventListener('change', function (e) {
-      var archivo = e.target.files[0];
-      leida = null; btn.disabled = true; err.textContent = ''; caja.innerHTML = '';
-      if (!archivo) return;
-      caja.innerHTML = '<div class="aviso info">' + ic('reloj') + '<div><b>Leyendo tu factura…</b>Tarda unos segundos.</div></div>';
-      var datosPdf = null;
-      leerPDF(archivo).then(function (d) { datosPdf = d; return leerConIA(d); }).then(function (r) {
-        var rv = revisar(r.datos, semanasLibres());
-        leida = { d: r.datos, rv: rv, modelo: r.modelo || '', pdf: datosPdf, archivo: archivo };
-        caja.innerHTML = pintarLeida(r.datos, rv);
-        btn.disabled = !rv.todoBien;
-      }).catch(function (ex) { console.error(ex); caja.innerHTML = ''; err.textContent = (ex && ex.message) || 'No pudimos leer tu factura.'; });
+    var libres = semanasLibres(), entrada = fm.querySelector('#facPdf'), actual = -1;
+    fm.querySelectorAll('[data-adjuntar]').forEach(function (b) {
+      b.addEventListener('click', function () { actual = Number(b.getAttribute('data-adjuntar')); entrada.value = ''; entrada.click(); });
     });
-    fm.addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (!leida || !leida.rv.todoBien) return;
-      var d = leida.d, a = leida.archivo;
-      btn.disabled = true; btn.textContent = 'Enviando…';
-      Promise.resolve().then(function () {
-        if (N.DEMO) { N.aviso('Demostración: la factura no se envió.'); return; }
-        var k = infoCorte(), db = N.db(), ref = db.collection('facturas').doc(), uid = N.auth().currentUser.uid, b = ahoraBolivia();
-        var lote = db.batch();
-        lote.set(db.collection('facturasPdf').doc(ref.id), { uid: uid, datos: leida.pdf });
-        lote.set(ref, {
-          uid: uid, id: String(S.datos.id || ''), nombre: String(S.datos.nombre || '').slice(0, 120),
-          semanas: leida.rv.semanas.map(function (p) { return p.semana; }), numero: d.numeroFactura, importe: Math.round(d.importeTotal * 100) / 100,
-          fechaEmision: d.fechaEmision, nitEmisor: d.nitEmisor, razonEmisor: String(d.razonSocialEmisor || '').slice(0, 160),
-          autorizacion: String(d.codigoAutorizacion || '').slice(0, 80), leidaIA: String(leida.modelo || '').slice(0, 60),
-          nombreArchivo: String(a.name || 'factura.pdf').slice(0, 120), tamano: a.size,
-          estado: 'recibida', subido: firebase.firestore.FieldValue.serverTimestamp(),
-          corte: k.iso, fueraDeCorte: b.getUTCDay() === 5 || (b.getUTCDay() === 4 && b.getUTCHours() >= 18)
-        });
-        return lote.commit().then(function () { N.aviso('Factura enviada. Te avisamos aquí cuando la revisemos.'); N.ir('facturas', true); });
-      }).catch(function (ex) {
-        console.error(ex);
-        err.textContent = ex && ex.message && !/permission|insufficient/i.test(ex.message) ? ex.message : 'No se pudo enviar. Revisa tu conexión e intenta de nuevo.';
-      }).then(function () { if (document.body.contains(btn)) { btn.disabled = !(leida && leida.rv.todoBien); btn.innerHTML = ic('descargar') + 'Enviar factura'; } });
+    entrada.addEventListener('change', function () {
+      var archivo = entrada.files[0], i = actual, pago = libres[i], caja = fm.querySelector('#facLeida' + i);
+      if (!archivo || !pago || !caja) return;
+      caja.innerHTML = '<div class="aviso info">' + ic('reloj') + '<div><b>Leyendo tu factura de la ' + esc(pago.semana) + '…</b>Tarda unos segundos.</div></div>';
+      var datosPdf = null;
+      leerPDF(archivo).then(function (d) { datosPdf = d; return leerConIA(d, pago); }).then(function (r) {
+        var rv = revisar(r.datos, pago, libres);
+        caja.innerHTML = pintarLeida(r.datos, rv);
+        var env = caja.querySelector('[data-enviar]');
+        if (env) env.addEventListener('click', function () { enviar({ d: r.datos, rv: rv, modelo: r.modelo || '', pdf: datosPdf, archivo: archivo, pago: pago }, env, caja.querySelector('[data-err]')); });
+      }).catch(function (ex) { console.error(ex); caja.innerHTML = '<div class="nm-login-err">' + esc((ex && ex.message) || 'No pudimos leer tu factura.') + '</div>'; });
     });
   };
+  function enviar(leida, btn, err) {
+    var d = leida.d, a = leida.archivo;
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    Promise.resolve().then(function () {
+      if (N.DEMO) { N.aviso('Demostración: la factura no se envió.'); return; }
+      var k = infoCorte(), db = N.db(), ref = db.collection('facturas').doc(), uid = N.auth().currentUser.uid, b = ahoraBolivia();
+      var lote = db.batch();
+      lote.set(db.collection('facturasPdf').doc(ref.id), { uid: uid, datos: leida.pdf });
+      lote.set(ref, {
+        uid: uid, id: String(S.datos.id || ''), nombre: String(S.datos.nombre || '').slice(0, 120),
+        semanas: [leida.pago.semana], numero: d.numeroFactura, importe: Math.round(d.importeTotal * 100) / 100,
+        fechaEmision: d.fechaEmision, nitEmisor: d.nitEmisor, razonEmisor: String(d.razonSocialEmisor || '').slice(0, 160),
+        autorizacion: String(d.codigoAutorizacion || '').slice(0, 80), leidaIA: String(leida.modelo || '').slice(0, 60),
+        nombreArchivo: String(a.name || 'factura.pdf').slice(0, 120), tamano: a.size,
+        estado: 'recibida', subido: firebase.firestore.FieldValue.serverTimestamp(),
+        corte: k.iso, fueraDeCorte: b.getUTCDay() === 5 || (b.getUTCDay() === 4 && b.getUTCHours() >= 18)
+      });
+      return lote.commit().then(function () { N.aviso('Factura de la ' + leida.pago.semana + ' enviada.'); N.ir('facturas', true); });
+    }).catch(function (ex) {
+      console.error(ex); btn.disabled = false; btn.innerHTML = ic('descargar') + 'Enviar factura';
+      if (err) err.textContent = ex && ex.message && !/permission|insufficient/i.test(ex.message) ? ex.message : 'No se pudo enviar. Revisa tu conexión e intenta de nuevo.';
+    });
+  }
 
   window.NM_FACTURAS = {
     resumen: function () { return lista; },
