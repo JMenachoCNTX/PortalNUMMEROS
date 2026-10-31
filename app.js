@@ -219,6 +219,7 @@
       db.collection('publico').doc('portal').get(),
       db.collection('publico').doc('contenido').get(),
       db.collection('repartidores').doc(uid).collection('lecturas').get(),
+      db.collection('perfiles').doc(uid).get().catch(function () { return null; }),
       // Con fuentePagos 'control' los pagos salen de «semanas» (las escribe CONTROL)
       C.fuentePagos === 'control' ? db.collection('semanas').where('uid', '==', uid).get() : Promise.resolve(null)
     ]).then(function (r) {
@@ -228,7 +229,8 @@
         return;
       }
       S.datos = r[0].data();
-      if (r[4]) aplicarSemanas(S.datos, r[4]);
+      S.perfil = r[4] && r[4].exists ? r[4].data() : null;
+      if (r[5]) aplicarSemanas(S.datos, r[5]);
       S.publico = r[1].exists ? r[1].data() : {};
       aplicarContenido(r[2].exists ? r[2].data() : {});
       S.lecturas = {};
@@ -485,7 +487,49 @@
     ir(PAGINAS[h] ? h : 'inicio', true);
     if (window.NM_CHAT && ((C.ia && C.ia.url) || DEMO)) window.NM_CHAT.montar();
     if (window.NM_NOTIF) setTimeout(window.NM_NOTIF.renovar, 2500);
+    // El NIT se pide una sola vez (antes de los avisos)
+    if (!S.perfil && !DEMO && !S.nitPreguntado) { S.nitPreguntado = true; setTimeout(function () { pedirNit(function () { if (!S.avisosVistos) { S.avisosVistos = true; mostrarAvisos(); } }); }, 400); return; }
     if (!S.avisosVistos) { S.avisosVistos = true; setTimeout(mostrarAvisos, 500); }
+  }
+
+  /* NIT y razón social del repartidor (colección perfiles). Se registran una sola vez;
+     después solo el equipo los cambia desde CONTROL. Con ellos se revisan las facturas que sube. */
+  function pedirNit(alTerminar) {
+    var d = S.datos || {}, m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = '<form class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="nitTit" novalidate>' +
+      '<div class="modal-cab"><div class="nm-patron oscuro" aria-hidden="true"></div>' +
+        '<div class="modal-fila"><img class="iso" src="marca/logos/nummeros-isotipo-blanco.svg" alt=""><span class="modal-chip">' + ic('doc') + 'Una sola vez</span></div>' +
+        '<h3 id="nitTit">Registra tu NIT</h3></div>' +
+      '<div class="modal-cuerpo"><p>Con tu NIT revisamos que las facturas que subes sean tuyas. Escríbelo tal como aparece en tus facturas.</p>' +
+        '<div class="fm-campo"><label for="nitNum">NIT</label><input id="nitNum" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="8130553010"></div>' +
+        '<div class="fm-campo"><label for="nitRazon">Nombre o razón social (como figura en tu NIT)</label><input id="nitRazon" maxlength="160" value="' + esc(d.nombre || '') + '"></div>' +
+        '<div class="nm-login-err" id="nitErr" role="alert"></div></div>' +
+      '<div class="modal-pie"><button type="button" class="btn sec" data-luego>Todavía no tengo NIT</button><button class="btn" type="submit" id="nitBtn">Guardar</button></div></form>';
+    document.body.appendChild(m);
+    var num = m.querySelector('#nitNum'), raz = m.querySelector('#nitRazon'), err = m.querySelector('#nitErr'), btn = m.querySelector('#nitBtn'), confirmado = false;
+    num.focus();
+    var cerrar = function () { m.remove(); if (alTerminar) alTerminar(); };
+    m.querySelector('[data-luego]').addEventListener('click', function () {
+      cerrar(); aviso('Sin NIT no puedes subir facturas. CONTAX te ayuda a sacarlo: escríbenos al WhatsApp.');
+    });
+    [num, raz].forEach(function (x) { x.addEventListener('input', function () { confirmado = false; btn.textContent = 'Guardar'; err.textContent = ''; }); });
+    m.querySelector('form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var nit = num.value.replace(/\D/g, ''), razon = raz.value.trim().replace(/\s+/g, ' ');
+      if (!/^\d{5,15}$/.test(nit)) { err.textContent = 'Escribe tu NIT (solo números).'; return; }
+      if (razon.length < 3) { err.textContent = 'Escribe tu nombre o razón social.'; return; }
+      // Segundo clic para confirmar: después ya no se puede cambiar desde el portal
+      if (!confirmado) { confirmado = true; err.textContent = 'Revisa: NIT ' + nit + ' · ' + razon + '. Después solo CONTAX puede cambiarlo.'; btn.textContent = 'Sí, es correcto'; return; }
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      var datos = { nit: nit, razonSocial: razon.slice(0, 160), creado: firebase.firestore.FieldValue.serverTimestamp() };
+      db.collection('perfiles').doc(S.usuario.uid).set(datos).then(function () {
+        S.perfil = { nit: nit, razonSocial: razon }; cerrar(); aviso('NIT guardado.');
+      }, function (ex) {
+        console.error(ex); btn.disabled = false; btn.textContent = 'Guardar'; confirmado = false;
+        err.textContent = /permission|insufficient/i.test(ex && ex.message) ? 'Tu NIT ya estaba registrado. Recarga la página.' : 'No se pudo guardar. Revisa tu conexión.';
+      });
+    });
   }
 
   function cargarScript(src, listo) {
@@ -1164,6 +1208,7 @@
       encuesta: { titulo: '¿Cómo te atendemos?', texto: 'Tu opinión nos ayuda a mejorar. Son 2 minutos.', textoBoton: 'Calificar el servicio', url: '#' }
     };
     S.lecturas = {};
+    S.perfil = { nit: '1234567', razonSocial: S.datos.nombre || 'REPARTIDOR DE EJEMPLO' };
     aplicarContenido({
       anuncios: [
         { id: 'a1', activo: true, orden: 1, titulo: 'Contax Consultora', fuente: 'subida:a1', imagen: 'anuncios/1XLpL88BPof26oe3QF5_uesfbYb-tIp6o.png', link: '' },
@@ -1182,7 +1227,7 @@
     S: S, C: C, DEMO: DEMO, db: function () { return db; }, auth: function () { return auth; },
     esc: esc, ic: ic, bs: bs, numero: numero, titulo: titulo, vacio: vacio, aviso: aviso, ir: ir,
     PAGINAS: PAGINAS, DESPUES: DESPUES, formatoAviso: formatoAviso, telVisible: telVisible,
-    aplicarContenido: aplicarContenido, vigente: vigente, idSeguro: idSeguro, cargarScript: cargarScript,
+    aplicarContenido: aplicarContenido, vigente: vigente, idSeguro: idSeguro, cargarScript: cargarScript, pedirNit: pedirNit,
     fechaTexto: fechaTexto, chipEstado: chipEstado, anilloBoton: anilloBoton,
     previaAviso: function (a) { mostrarAviso([Object.assign({ previa: true, codigo: 'previa' }, a)], 0, {}); },
     refrescar: function () { var p = S.pagina; arrancarApp(); ir(p, true); }

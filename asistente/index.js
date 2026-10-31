@@ -5,11 +5,14 @@
       (token de Firebase), así nadie de afuera gasta tu saldo.
    2) Limita la cantidad de preguntas por persona.
    3) Le pasa a DeepSeek la pregunta con los datos del repartidor.
-   La clave de DeepSeek vive SOLO aquí (secreto DEEPSEEK_API_KEY).
+   4) Ruta /factura: lee con Gemini el PDF de la factura que sube el repartidor
+      y devuelve sus datos (N.º, fecha, NIT, razón social, importe, CUF…).
+   Las claves viven SOLO aquí (secretos DEEPSEEK_API_KEY y GEMINI_API_KEY).
    ══════════════════════════════════════════════════════════ */
 
 const LIMITE = { preguntas: 15, minutos: 10 };   // por repartidor
-const usos = new Map();
+const LIMITE_FACTURAS = { lecturas: 10, minutos: 10 };
+const usos = new Map(), usosFacturas = new Map();
 
 let llaves = null, llavesHasta = 0;
 async function llavesGoogle() {
@@ -43,13 +46,66 @@ async function verificarToken(token, proyecto) {
   return d;
 }
 
-function permitido(uid) {
-  const ahora = Date.now(), ventana = LIMITE.minutos * 60e3;
-  const l = (usos.get(uid) || []).filter(t => ahora - t < ventana);
-  if (l.length >= LIMITE.preguntas) { usos.set(uid, l); return false; }
-  l.push(ahora); usos.set(uid, l);
-  if (usos.size > 5000) usos.clear();
+function permitido(uid, mapa = usos, lim = LIMITE.preguntas, minutos = LIMITE.minutos) {
+  const ahora = Date.now(), ventana = minutos * 60e3;
+  const l = (mapa.get(uid) || []).filter(t => ahora - t < ventana);
+  if (l.length >= lim) { mapa.set(uid, l); return false; }
+  l.push(ahora); mapa.set(uid, l);
+  if (mapa.size > 5000) mapa.clear();
   return true;
+}
+
+/* ══════════ LECTOR DE FACTURAS (Gemini) ══════════ */
+const LECTOR = `Eres un lector de facturas electrónicas del SIAT de Bolivia (Impuestos Nacionales).
+Recibes el PDF de una factura que un repartidor emitió por sus servicios. Extrae los datos exactamente como aparecen.
+- esFactura: false si el documento no es una factura (por ejemplo una foto, un recibo, un comprobante de pago o una nota).
+- nitEmisor: NIT de quien EMITE la factura (arriba, junto a su nombre). Solo dígitos.
+- razonSocialEmisor: nombre o razón social de quien emite.
+- numeroFactura: número de la factura ("FACTURA N°" / "N° FACTURA"). Solo dígitos.
+- codigoAutorizacion: el CUF ("CÓD. AUTORIZACIÓN" o "CUF"), tal cual, en mayúsculas y sin espacios.
+- fechaEmision: fecha de emisión en formato AAAA-MM-DD.
+- nitComprador: NIT/CI/CEX del cliente ("NIT/CI/CEX" del comprador). Solo dígitos.
+- razonSocialComprador: "Nombre/Razón Social" del cliente.
+- importeTotal: el total a pagar o "MONTO A PAGAR" / "IMPORTE BASE CRÉDITO FISCAL" si es el único total, como número (punto decimal).
+- anulada: true solo si el PDF dice claramente ANULADA.
+Si un dato no aparece, déjalo vacío (o 0 en importeTotal). No inventes nada.`;
+const ESQUEMA_FACTURA = {
+  type: 'OBJECT',
+  properties: {
+    esFactura: { type: 'BOOLEAN' }, nitEmisor: { type: 'STRING' }, razonSocialEmisor: { type: 'STRING' }, numeroFactura: { type: 'STRING' },
+    codigoAutorizacion: { type: 'STRING' }, fechaEmision: { type: 'STRING' }, nitComprador: { type: 'STRING' }, razonSocialComprador: { type: 'STRING' },
+    importeTotal: { type: 'NUMBER' }, anulada: { type: 'BOOLEAN' }
+  },
+  required: ['esFactura', 'nitEmisor', 'razonSocialEmisor', 'numeroFactura', 'fechaEmision', 'nitComprador', 'razonSocialComprador', 'importeTotal']
+};
+async function leerFactura(pedido, env, cab) {
+  const pdf = String(pedido.pdf || '').replace(/^data:[^,]*,/, '');
+  if (!pdf || pdf.length > 1400000) return respuesta({ error: 'El PDF es muy grande o está vacío (máximo 1 MB).' }, 400, cab);
+  const modelos = [env.MODELO_GEMINI, 'gemini-flash-latest', 'gemini-flash-lite-latest'].filter(Boolean);
+  let ultimo = '';
+  for (const m of modelos) {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+      body: JSON.stringify({
+        contents: [{ parts: [{ inline_data: { mime_type: 'application/pdf', data: pdf } }, { text: 'Extrae los datos de esta factura.' }] }],
+        systemInstruction: { parts: [{ text: LECTOR }] },
+        generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: ESQUEMA_FACTURA }
+      })
+    });
+    if (!r.ok) { ultimo = r.status + ' ' + (await r.text()).slice(0, 200); console.log('Gemini', m, ultimo); continue; }
+    const j = await r.json();
+    const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(p => p.text || '').join('');
+    let d; try { d = JSON.parse(t || '{}'); } catch (e) { ultimo = 'json'; continue; }
+    const dig = v => String(v || '').replace(/\D/g, '');
+    return respuesta({ datos: {
+      esFactura: d.esFactura !== false, nitEmisor: dig(d.nitEmisor), razonSocialEmisor: String(d.razonSocialEmisor || '').trim().slice(0, 160),
+      numeroFactura: dig(d.numeroFactura), codigoAutorizacion: String(d.codigoAutorizacion || '').replace(/\s+/g, '').toUpperCase().slice(0, 80),
+      fechaEmision: /^\d{4}-\d{2}-\d{2}$/.test(d.fechaEmision || '') ? d.fechaEmision : '', nitComprador: dig(d.nitComprador),
+      razonSocialComprador: String(d.razonSocialComprador || '').trim().slice(0, 160), importeTotal: Math.round((Number(d.importeTotal) || 0) * 100) / 100, anulada: d.anulada === true
+    }, modelo: m }, 200, cab);
+  }
+  return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.' }, 502, cab);
 }
 
 const INSTRUCCIONES = `Eres el asistente del Portal CONTAX, el portal donde los repartidores de Yango en Bolivia consultan sus pagos, facturas y trámites. CONTAX es una consultora contable; el portal lo desarrolló NUMMEROS by CONTAX.
@@ -94,15 +150,19 @@ async function atender(req, env) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cab });
     if (req.method === 'GET') return respuesta({ ok: true, servicio: 'Asistente Portal CONTAX' }, 200, cab);
     if (req.method !== 'POST') return respuesta({ error: 'Método no permitido' }, 405, cab);
-    if (!env.DEEPSEEK_API_KEY) return respuesta({ error: 'El asistente no está configurado.' }, 503, cab);
+    const esFactura = new URL(req.url).pathname.replace(/\/+$/, '') === '/factura';
+    if (esFactura && !env.GEMINI_API_KEY) return respuesta({ error: 'El lector de facturas no está configurado.' }, 503, cab);
+    if (!esFactura && !env.DEEPSEEK_API_KEY) return respuesta({ error: 'El asistente no está configurado.' }, 503, cab);
 
     let usuario;
     try { usuario = await verificarToken((req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''), env.PROYECTO_FIREBASE); }
     catch (e) { return respuesta({ error: 'Tu sesión venció. Vuelve a entrar al portal.' }, 401, cab); }
-    if (!permitido(usuario.sub)) return respuesta({ error: 'Hiciste muchas preguntas seguidas. Espera unos minutos y vuelve a intentar.' }, 429, cab);
+    if (esFactura ? !permitido(usuario.sub, usosFacturas, LIMITE_FACTURAS.lecturas, LIMITE_FACTURAS.minutos) : !permitido(usuario.sub))
+      return respuesta({ error: esFactura ? 'Subiste muchas facturas seguidas. Espera unos minutos y vuelve a intentar.' : 'Hiciste muchas preguntas seguidas. Espera unos minutos y vuelve a intentar.' }, 429, cab);
 
     let pedido;
     try { pedido = await req.json(); } catch (e) { return respuesta({ error: 'Pedido inválido' }, 400, cab); }
+    if (esFactura) return leerFactura(pedido, env, cab);
     const mensajes = (Array.isArray(pedido.mensajes) ? pedido.mensajes : []).slice(-8)
       .map(m => ({ role: m.rol === 'asistente' ? 'assistant' : 'user', content: String(m.texto || '').slice(0, 600) }))
       .filter(m => m.content);
