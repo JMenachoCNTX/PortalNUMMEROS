@@ -99,6 +99,14 @@ service cloud.firestore {
       allow read, create: if esAdmin();
     }
 
+    // Semanas de pago (una por repartidor y semana). Las escribe CONTROL al importar las
+    // planillas de Yango/MTG, al generar la planilla y al confirmar el pago.
+    // Ver INTEGRACION-NUCLEO-YANGO.md (carpeta Proyectos).
+    match /semanas/{id} {
+      allow read: if esEquipo() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow write: if puedeEditar();
+    }
+
     // Lo último que hizo la sincronización (para el tablero de CONTROL)
     match /privado/estado {
       allow read: if esEquipo();
