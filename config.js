@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.17',
+  version: '3.18',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -41,6 +41,9 @@ window.PORTAL = {
      'control' = colección «semanas» que llena CONTROL (estados Pendiente, Enviado a pagar, Pagado, No habilitado).
      Se cambia a 'control' el mismo día que CONTROL (ver INTEGRACION-NUCLEO-YANGO.md). */
   fuentePagos: 'sheets',
+  /* Mis documentos: vigencia que debe tener la Matrícula de Comercio de la gestión actual,
+     gestión de los estados financieros que se piden y cuántos meses de declaraciones se muestran */
+  documentos: { matriculaHasta: '2027-05-31', gestionEEFF: '2025', meses: 6 },
   reglasPago: [
     'Las facturas se reciben hasta el jueves antes de las 18:00. Si llegan después y están correctas, se pagan la semana siguiente.',
     'Los pagos los realiza Milthagor S.R.L., por lo general los viernes. A veces se adelantan al jueves después de las 19:00.',

@@ -420,6 +420,7 @@
     pararCarrusel();
     if (window.NM_CHAT) window.NM_CHAT.quitar();
     if (window.NM_FACTURAS) window.NM_FACTURAS.salir();
+    if (window.NM_DOCUMENTOS) window.NM_DOCUMENTOS.salir();
     S.datos = null; S.avisosVistos = false;
     if (DEMO) { guardar('nm_demo_sesion', '0'); pintarLogin(); return; }
     auth.signOut();
@@ -433,6 +434,7 @@
     { id: 'facturas', t: 'Mis facturas', i: 'doc' },
     { id: 'historial', t: 'Historial', i: 'historial' },
     { id: 'reporte', t: 'Reporte', i: 'resumen' },
+    { id: 'documentos', t: 'Mis documentos', i: 'doc' },
     { sec: 'Ayuda' },
     { id: 'tramites', t: 'Mis trámites', i: 'tramites' },
     { id: 'servicios', t: 'Ayuda con tu facturación', i: 'factura', seccion: 'servicios' },
@@ -548,7 +550,7 @@
       return '<button class="nav-link' + (S.pagina === m.id ? ' active' : '') + '" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span>' + c + '</button>';
     }).join('') +
       '<div class="nav-pie"><img src="marca/logos/nummeros-logotipo-firma-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS by CONTAX">Portal CONTAX · v' + esc(C.version) + '</div>';
-    var enMas = ['historial', 'reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0;
+    var enMas = ['historial', 'documentos', 'reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0;
     document.getElementById('tabbar').innerHTML = TABS.map(function (t) {
       var on = t.id === S.pagina || (t.id === 'mas' && enMas);
       return '<button class="' + (on ? 'on' : '') + '" ' + (t.id === 'mas' ? 'data-accion="mas"' : 'data-ir="' + t.id + '"') + '><i>' + ic(t.i) + '</i>' + t.t + '</button>';
@@ -1028,7 +1030,7 @@
     var h = document.createElement('div');
     h.className = 'hoja-mas'; h.id = 'hojaMas';
     h.innerHTML = '<div class="fondo" data-accion="cerrarMas"></div><div class="hoja" role="dialog" aria-label="Más opciones"><div class="agarre"></div>' +
-      [['historial', 'Historial', 'historial'], ['reporte', 'Reporte', 'resumen'], ['servicios', 'Ayuda con tu facturación', 'factura', 'servicios'], ['tutoriales', 'Tutoriales', 'video', 'tutoriales'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
+      [['historial', 'Historial', 'historial'], ['reporte', 'Reporte', 'resumen'], ['documentos', 'Mis documentos', 'doc'], ['servicios', 'Ayuda con tu facturación', 'factura', 'servicios'], ['tutoriales', 'Tutoriales', 'video', 'tutoriales'], ['preguntas', 'Preguntas', 'preguntas'], ['contacto', 'Contacto', 'contacto'], ['notificaciones', 'Notificaciones', 'campana'], ['instalar', 'Instalar en el celular', 'instalar']].map(function (m) {
         if (!seccionVisible(m[3])) return '';
         return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (seccionOculta(m[3]) ? '<span class="cuenta oculta">Oculta</span>' : '') + '</button>';
       }).join('') +

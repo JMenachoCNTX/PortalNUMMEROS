@@ -111,6 +111,26 @@ service cloud.firestore {
       allow update, delete: if puedeEditar();
     }
 
+    // Documentación del repartidor (NIT, matrícula, ROE, declaraciones mensuales, estados financieros).
+    // documentos/{uid}_{tipo}[_{periodo}]: datos y estado · documentosArchivo/{mismo id}: el archivo.
+    // El repartidor sube o reemplaza los suyos mientras no estén aprobados; el equipo los revisa en CONTROL.
+    match /documentos/{doc} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow create, update: if puedeEditar() || (conSesion() && doc.matches(request.auth.uid + '_.+')
+        && request.resource.data.uid == request.auth.uid && request.resource.data.estado == 'recibido'
+        && (resource == null || resource.data.estado != 'aprobado')
+        && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'tipo', 'periodo', 'nombreArchivo', 'tamano', 'mime', 'estado', 'subido', 'vigencia'])
+        && request.resource.data.tipo in ['nit', 'matricula', 'roe', 'rcv', 'f200', 'f400', 'eeff']);
+      allow delete: if false;
+    }
+    match /documentosArchivo/{doc} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow create, update: if conSesion() && doc.matches(request.auth.uid + '_.+') && request.resource.data.uid == request.auth.uid
+        && request.resource.data.datos is string && request.resource.data.datos.size() < 1000000
+        && (!exists(/databases/$(database)/documents/documentos/$(doc)) || get(/databases/$(database)/documents/documentos/$(doc)).data.estado != 'aprobado');
+      allow delete: if false;
+    }
+
     // Semanas de pago (una por repartidor y semana). Las escribe CONTROL al importar las
     // planillas de Yango/MTG, al generar la planilla y al confirmar el pago.
     // Ver INTEGRACION-NUCLEO-YANGO.md (carpeta Proyectos).
