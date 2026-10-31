@@ -73,7 +73,8 @@
   N.PAGINAS.facturas = function () {
     if (!lista) cargar();
     var d = S.datos || {}, pend = d.pendientes || [], ya = semanasConFactura(), k = infoCorte();
-    var libres = pend.filter(function (p) { return !ya[p.semana]; });
+    // Las semanas «Enviado a pagar» ya están en la planilla del banco: no se vuelven a facturar
+    var libres = pend.filter(function (p) { return !ya[p.semana] && !p.enPlanilla; });
     return N.titulo('Mis facturas', 'Sube aquí tu factura en PDF. Ya no hace falta mandarla por WhatsApp.') +
       '<div class="aviso info">' + ic('reloj') + '<div><b>Corte: ' + textoDia(k.corte) + ' a las 18:00</b>' +
         'Lo que subas antes entra al pago del ' + textoDia(k.viernes) + '. Lo que llegue después entra al pago de la semana siguiente.' +

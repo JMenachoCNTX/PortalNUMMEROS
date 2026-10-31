@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.11',
+  version: '3.12',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -43,6 +43,10 @@ window.PORTAL = {
     nit: '550276028'
   },
 
+  /* De dónde salen los pagos: 'sheets' = Google Sheets (robot sync/), como hoy.
+     'control' = colección «semanas» que llena CONTROL (estados Pendiente, Enviado a pagar, Pagado, No habilitado).
+     Se cambia a 'control' el mismo día que CONTROL (ver INTEGRACION-NUCLEO-YANGO.md). */
+  fuentePagos: 'sheets',
   reglasPago: [
     'Las facturas se reciben hasta el jueves antes de las 18:00. Si llegan después y están correctas, se pagan la semana siguiente.',
     'Los pagos los realiza Milthagor S.R.L., por lo general los viernes. A veces se adelantan al jueves después de las 19:00.',

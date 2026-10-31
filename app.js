@@ -220,7 +220,9 @@
       db.collection('repartidores').doc(uid).get(),
       db.collection('publico').doc('portal').get(),
       db.collection('publico').doc('contenido').get(),
-      db.collection('repartidores').doc(uid).collection('lecturas').get()
+      db.collection('repartidores').doc(uid).collection('lecturas').get(),
+      // Con fuentePagos 'control' los pagos salen de «semanas» (las escribe CONTROL)
+      C.fuentePagos === 'control' ? db.collection('semanas').where('uid', '==', uid).get() : Promise.resolve(null)
     ]).then(function (r) {
       if (!r[0].exists) {
         pintarMensaje('Tus datos se están preparando',
@@ -228,6 +230,7 @@
         return;
       }
       S.datos = r[0].data();
+      if (r[4]) aplicarSemanas(S.datos, r[4]);
       S.publico = r[1].exists ? r[1].data() : {};
       aplicarContenido(r[2].exists ? r[2].data() : {});
       S.lecturas = {};
@@ -237,6 +240,40 @@
       console.error(e);
       pintarMensaje('No pudimos cargar tus datos', 'Revisa tu conexión a internet e intenta de nuevo.');
     });
+  }
+
+  /* Semanas de pago desde la colección «semanas»: arma pendientes, historial y la lista completa de semanas.
+     Estados: pendiente · en_planilla («Enviado a pagar») · pagado · no_habilitado (importe 0) */
+  function aplicarSemanas(d, q) {
+    var l = []; q.forEach(function (x) { l.push(x.data()); });
+    l.sort(function (a, b) { return (b.orden || 0) - (a.orden || 0); });
+    var fecha = function (iso) { var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); };
+    var suma = function (x) { return Math.round(x.reduce(function (t, s) { return t + s.importe; }, 0) * 100) / 100; };
+    d.semanas = l.map(function (s) {
+      return { semana: s.semana, rango: s.rango || '', importe: Number(s.importe) || 0, tipo: s.estado, ganancias: Number(s.ganancias) || 0, anterior: Number(s.importeAnterior) || 0,
+        fechaPago: s.fechaPago ? fecha(s.fechaPago) : '', fuera: s.fueraDePlanilla ? s.fueraDePlanilla.motivo : '', rebote: !!s.rebote };
+    });
+    d.pendientes = d.semanas.filter(function (s) { return s.tipo === 'pendiente' || s.tipo === 'en_planilla'; }).map(function (s) {
+      return Object.assign({}, s, { enPlanilla: s.tipo === 'en_planilla', estado: s.tipo === 'en_planilla' ? 'Enviado a pagar' : s.fuera ? 'No entró a la planilla' : s.rebote ? 'Devuelto por el banco' : 'Pendiente' });
+    });
+    d.historial = d.semanas.filter(function (s) { return s.tipo === 'pagado'; });
+    d.ultimaSemana = d.semanas[0] || null;
+    d.habilitado = !(d.ultimaSemana && d.ultimaSemana.tipo === 'no_habilitado');
+    d.resumen = { pendientes: { cantidad: d.pendientes.length, total: suma(d.pendientes) }, pagados: { cantidad: d.historial.length, total: suma(d.historial) } };
+  }
+  /* Explicación corta de una semana (debajo del estado) */
+  function notaSemana(s) {
+    if (s.tipo === 'no_habilitado') return s.ganancias > 0 ? 'Saliste en Bs 0, pero generaste ' + bs(s.ganancias) + '. No se pierde: se suma a tu próxima semana habilitada y lo facturas junto con ella.' : 'Sin actividad esta semana.';
+    var n = [];
+    if (s.tipo === 'en_planilla') n.push('Ya está en la planilla del banco. Solo falta que el banco confirme el pago.');
+    else if (s.tipo === 'pendiente' && s.fuera) n.push('No entró a la planilla del banco: ' + s.fuera.charAt(0).toLowerCase() + s.fuera.slice(1) + '. Actualiza tus datos en Yango para cobrar en la próxima planilla.');
+    else if (s.tipo === 'pendiente' && s.rebote) n.push('El banco devolvió este pago. Revisa que tus datos bancarios en Yango estén bien.');
+    if (s.anterior > 0) n.push('Incluye ' + bs(s.anterior) + ' de semanas anteriores.');
+    return n.join(' ');
+  }
+  function chipSemanaTipo(s) {
+    var t = { pagado: ['ok', 'Pagado' + (s.fechaPago ? ' el ' + s.fechaPago : '')], en_planilla: ['pend', 'Enviado a pagar'], pendiente: [s.fuera || s.rebote ? 'mal' : 'pend', s.fuera ? 'No entró a la planilla' : s.rebote ? 'Devuelto por el banco' : 'Pendiente'], no_habilitado: ['mal', 'No habilitado'] }[s.tipo] || ['pend', s.tipo];
+    return '<span class="chip ' + t[0] + '">' + esc(t[1]) + '</span>';
   }
 
   /* Anuncios, avisos y preguntas (se editan en el panel de administrador) */
@@ -555,6 +592,10 @@
   /* ── Bloques que se repiten ── */
   function alertaHabilitacion() {
     if (!S.datos || S.datos.habilitado !== false) return '';
+    var u = S.datos.ultimaSemana;
+    if (u) return '<div class="aviso error">' + ic('alerta') + '<div><b>La semana ' + esc(u.semana) + ' no fue habilitada por Yango (Bs 0)</b>' +
+      (u.ganancias > 0 ? 'Generaste ' + bs(u.ganancias) + ' esa semana. Ese monto no se pierde: se suma a tu próxima semana habilitada y emites una sola factura por el total.' : 'No tuviste actividad esa semana.') +
+      ' Si tienes pagos de semanas anteriores pendientes y emites tu factura, esos sí se te pagan.</div></div>';
     return '<div class="aviso error">' + ic('alerta') + '<div><b>Tu pago de esta semana no está habilitado por la app</b>' +
       'No cumpliste con las horas mínimas de Yango esta semana. Si tienes pagos de semanas anteriores pendientes y emites tu factura, esos sí se te pagan.</div></div>';
   }
@@ -635,7 +676,7 @@
           ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Semana</th><th>Período</th><th>Estado</th><th class="monto">Importe</th></tr></thead><tbody>' +
             lista.map(function (p) {
               return '<tr><td data-et="Semana"><b class="num">' + esc(p.semana) + '</b></td><td data-et="Período">' + esc(p.rango) + '</td>' +
-                '<td data-et="Estado">' + chipPendiente(p.estado) + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>';
+                '<td data-et="Estado">' + chipPendiente(p.estado) + (p.tipo && notaSemana(p) ? '<small class="muted" style="display:block;margin-top:4px">' + esc(notaSemana(p)) + '</small>' : '') + '</td><td class="monto" data-et="Importe">' + bs(p.importe) + '</td></tr>';
             }).join('') +
             '</tbody><tfoot><tr><td colspan="3">Total por cobrar</td><td class="monto" data-et="Total por cobrar">' + bs(r.total) + '</td></tr></tfoot></table></div>'
           : vacio('No tienes pagos pendientes', 'Cuando registremos una semana nueva aparecerá aquí.')) +
@@ -644,7 +685,16 @@
 
   PAGINAS.historial = function () {
     var d = S.datos, lista = d.historial || [], r = (d.resumen || {}).pagados || { total: 0 };
+    var todas = d.semanas || [];
     return titulo('Historial de pagos', 'Pagos que ya recibiste.') +
+      (todas.length ? '<div class="card"><div class="h2">Todas tus semanas <small>' + todas.length + '</small></div>' +
+        '<p class="muted" style="margin-bottom:12px">Cada semana que figura en las planillas de Yango, aunque haya salido en Bs 0.</p>' +
+        '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Semana</th><th>Período</th><th>Estado</th><th class="monto">Importe</th></tr></thead><tbody>' +
+        todas.map(function (s) {
+          var n = notaSemana(s);
+          return '<tr><td data-et="Semana"><b class="num">' + esc(s.semana) + '</b></td><td data-et="Período">' + esc(s.rango) + '</td>' +
+            '<td data-et="Estado">' + chipSemanaTipo(s) + (n ? '<small class="muted" style="display:block;margin-top:4px">' + esc(n) + '</small>' : '') + '</td><td class="monto" data-et="Importe">' + bs(s.importe) + '</td></tr>';
+        }).join('') + '</tbody></table></div></div>' : '') +
       '<div class="card">' +
         (lista.length
           ? '<div class="tabla-caja tabla-movil"><table><thead><tr><th>Fecha de pago</th><th>Semana</th><th>Período</th><th class="monto">Importe</th></tr></thead><tbody>' +
@@ -796,7 +846,7 @@
   function chipPendiente(e) {
     e = String(e || '').replace(/[\u2600-\u27BF\uFE0F\u200D]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/g, '').trim() || 'Pendiente';
     var u = e.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    var c = /RETEN|RECHAZ|FALTA|NO HABIL|OBSERV|ANULAD/.test(u) ? 'mal' : (/HABILITAD|APROBAD|RECIBID|PAGAD|LISTO/.test(u) ? 'ok' : 'pend');
+    var c = /RETEN|RECHAZ|FALTA|NO HABIL|OBSERV|ANULAD|NO ENTRO|DEVUELTO/.test(u) ? 'mal' : /ENVIADO A PAGAR/.test(u) ? 'pend' : (/HABILITAD|APROBAD|RECIBID|PAGAD|LISTO/.test(u) ? 'ok' : 'pend');
     return '<span class="chip ' + c + '">' + esc(e) + '</span>';
   }
   function claseTramite(t) {
