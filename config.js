@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.12',
+  version: '3.13',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -23,16 +23,13 @@ window.PORTAL = {
      de la primera sincronización. */
   dominioUsuarios: 'repartidores.portalnummeros.app',
 
-  /* Administrador: entra con el celular y el ID del usuario de prueba y,
-     ya adentro, el portal le pide la clave (secreto ADMIN_CLAVE en GitHub). */
-  accesoAdmin: '1234',
-  correoAdmin: 'admin@portalnummeros.app',
+  /* La administración (anuncios, avisos, preguntas, notificaciones, chats) se hace en CONTROL */
+  controlUrl: 'https://jmenachocntx.github.io/CONTROL-NUMMEROS/',
 
   /* Asistente con IA (DeepSeek a través de Cloudflare). Vacío = apagado. */
   ia: { url: 'https://portal-nummeros-ia.jhonnymenacho04.workers.dev' },
 
-  /* Pestañas en preparación: false = ocultas para los repartidores
-     (el administrador sí las ve, con la marca "Oculta"). Pon true para publicarlas. */
+  /* Pestañas en preparación: false = ocultas para los repartidores. Pon true para publicarlas. */
   secciones: { tutoriales: false, servicios: false },
 
   whatsappGeneral: '59169021969',   // consultas

@@ -129,7 +129,7 @@
     if (N.DEMO || !S.usuario) return;
     var d = S.datos || {};
     N.db().collection('chats').add({
-      uid: S.usuario.uid, id: S.admin ? 'ADMIN' : String(d.id || ''), nombre: S.admin ? 'Administrador' : String(d.nombre || '').slice(0, 120),
+      uid: S.usuario.uid, id: String(d.id || ''), nombre: String(d.nombre || '').slice(0, 120),
       pregunta: pregunta.slice(0, 600), respuesta: String(resp || '').slice(0, 3000), tokens: Number(tokens) || 0,
       fecha: firebase.firestore.FieldValue.serverTimestamp()
     }).catch(function (e) { console.warn('No se pudo registrar el chat', e); });

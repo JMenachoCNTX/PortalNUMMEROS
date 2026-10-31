@@ -2,7 +2,7 @@
    NOTIFICACIONES AL CELULAR · Portal CONTAX
    El repartidor las activa una vez. El robot de sincronización le avisa
    cuando se carga una semana nueva, cuando recibe un pago o cuando cambia
-   un trámite. El administrador también puede enviar avisos.
+   un trámite. El equipo también puede enviar avisos desde CONTROL.
    En iPhone solo funcionan si el portal está instalado en la pantalla de inicio.
    ══════════════════════════════════════════════════════════ */
 (function () {
@@ -134,14 +134,14 @@
 
   /* Renueva el token una vez al día (Google lo cambia de vez en cuando) */
   function renovar() {
-    if (N.DEMO || S.admin || estado() !== 'activas') return;
+    if (N.DEMO || estado() !== 'activas') return;
     if (Date.now() - Number(leer('nm_notif_fecha') || 0) < 864e5) { obtenerToken().catch(function () {}); return; }
     obtenerToken().then(function (t) { if (t) return guardarToken(t).then(function () { guardar('nm_notif_fecha', String(Date.now())); }); }).catch(function () {});
   }
 
   /* ── Tarjeta del inicio ── */
   function tarjeta() {
-    if (S.admin || leer('nm_notif_cerrada') === '1') return '';
+    if (leer('nm_notif_cerrada') === '1') return '';
     var e = estado();
     if (e === 'activas' || e === 'sin-soporte' || e === 'pronto') return '';
     return '<div class="notif-card"><div class="notif-ic">' + ic('campana') + '</div><div class="notif-txt"><b>Entérate al instante</b>' +

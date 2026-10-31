@@ -20,9 +20,7 @@
     usuario: null,
     carrusel: null,
     grafico: null,
-    admin: false,         // sesión de administrador
-    contenido: null,      // anuncios, avisos y preguntas tal como se editan
-    adminPreguntado: false
+    contenido: null       // anuncios, avisos y preguntas tal como se editan en CONTROL
   };
 
   /* ── Íconos de línea (sin emojis, regla de marca) ── */
@@ -177,11 +175,15 @@
     }
     auth.onAuthStateChanged(function (u) {
       S.usuario = u;
-      if (!u) { S.datos = null; S.admin = false; pintarLogin(); return; }
+      if (!u) { S.datos = null; pintarLogin(S.motivoSalida); S.motivoSalida = null; return; }
       u.getIdTokenResult().then(function (t) {
-        S.admin = !!(t.claims && t.claims.admin);
+        // La administración del portal se mudó a CONTROL: la cuenta de administrador vieja ya no entra aquí
+        if (t.claims && t.claims.admin) {
+          S.motivoSalida = 'La administración (anuncios, avisos, preguntas, notificaciones y chats) ahora está en CONTROL: ' + C.controlUrl + ' (entra con tu usuario del Panel NUMMEROS).';
+          auth.signOut(); return;
+        }
         cargarDatos();
-      }, function () { S.admin = false; cargarDatos(); });
+      }, function () { cargarDatos(); });
     });
   }
 
@@ -214,8 +216,7 @@
 
   function cargarDatos() {
     mostrarCarga();
-    // El administrador ve el portal con los datos del usuario de prueba
-    var uid = S.admin ? idSeguro(C.accesoAdmin) : S.usuario.uid;
+    var uid = S.usuario.uid;
     Promise.all([
       db.collection('repartidores').doc(uid).get(),
       db.collection('publico').doc('portal').get(),
@@ -276,7 +277,7 @@
     return '<span class="chip ' + t[0] + '">' + esc(t[1]) + '</span>';
   }
 
-  /* Anuncios, avisos y preguntas (se editan en el panel de administrador) */
+  /* Anuncios, avisos y preguntas (se editan en CONTROL) */
   function hoyISO() {
     var d = new Date(), z = function (x) { return (x < 10 ? '0' : '') + x; };
     return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate());
@@ -450,19 +451,10 @@
     { id: 'mas', t: 'Más', i: 'mas' }
   ];
 
-  var MENU_ADMIN = [
-    { sec: 'Administración' },
-    { id: 'admin', t: 'Panel', i: 'panel' },
-    { id: 'admin-anuncios', t: 'Anuncios', i: 'imagen' },
-    { id: 'admin-avisos', t: 'Avisos', i: 'megafono' },
-    { id: 'admin-preguntas', t: 'Preguntas', i: 'preguntas' },
-    { id: 'admin-registros', t: 'Chats y lecturas', i: 'chat' }
-  ];
-  function seccionVisible(k) { return !k || (C.secciones && C.secciones[k]) || S.admin; }
+  function seccionVisible(k) { return !k || (C.secciones && C.secciones[k]); }
   function seccionOculta(k) { return k && !(C.secciones && C.secciones[k]); }
   function menu() {
-    var m = MENU.filter(function (x) { return seccionVisible(x.seccion); });
-    return S.admin ? m.concat(MENU_ADMIN) : m;
+    return MENU.filter(function (x) { return seccionVisible(x.seccion); });
   }
 
   function cuentas() {
@@ -477,7 +469,7 @@
       (DEMO ? '<div class="demo-cinta">Modo demostración: estos datos son de ejemplo. Los datos reales aparecen cuando se conecte Firebase.</div>' : '') +
       '<header class="hdr">' +
         '<button class="hdr-brand" data-ir="inicio" aria-label="Ir al inicio"><img src="marca/logos/nummeros-logotipo-horizontal-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS">' +
-        '<span class="hdr-emp"><b>Portal CONTAX</b>' + (S.admin ? 'Administrador' : esc(d.nombre || '') + ' · ID ' + esc(d.id || '')) + '</span></button>' +
+        '<span class="hdr-emp"><b>Portal CONTAX</b>' + esc(d.nombre || '') + ' · ID ' + esc(d.id || '') + '</span></button>' +
         '<div class="hdr-r">' +
           '<span class="hdr-sync">' + (ultimaSync() ? 'Datos al ' + fechaTexto(ultimaSync()) : '') + '</span>' +
           '<button class="hdr-btn solo" data-accion="tema" aria-label="Cambiar modo claro u oscuro">' + ic(S.oscuro ? 'sol' : 'luna') + '</button>' +
@@ -490,16 +482,13 @@
       '</div>' +
       '<nav class="tabbar" id="tabbar" aria-label="Menú"></nav>' +
       /* Franja con nombre completo e ID: así CONTAX sabe quién es cuando envían una captura */
-      '<div class="id-movil" aria-label="Tus datos">' + (S.admin ? '<b>ADMINISTRADOR</b>' :
-        '<b>' + esc(String(d.nombre || '').toUpperCase()) + '</b><span>ID ' + esc(d.id || '') + '</span>') + '</div>';
+      '<div class="id-movil" aria-label="Tus datos"><b>' + esc(String(d.nombre || '').toUpperCase()) + '</b><span>ID ' + esc(d.id || '') + '</span></div>';
     var h = (location.hash || '').replace('#/', '');
     if (h === 'resumen') h = 'reporte';
-    if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js?v=' + C.version, function () { ir(PAGINAS[h] ? h : 'admin', true); }); }
     ir(PAGINAS[h] ? h : 'inicio', true);
     if (window.NM_CHAT && ((C.ia && C.ia.url) || DEMO)) window.NM_CHAT.montar();
     if (window.NM_NOTIF) setTimeout(window.NM_NOTIF.renovar, 2500);
-    if (S.datos.id === C.accesoAdmin && !S.admin && !S.adminPreguntado && !DEMO) { S.adminPreguntado = true; setTimeout(preguntarAdmin, 300); return; }
-    if (!S.avisosVistos && !S.admin) { S.avisosVistos = true; setTimeout(mostrarAvisos, 500); }
+    if (!S.avisosVistos) { S.avisosVistos = true; setTimeout(mostrarAvisos, 500); }
   }
 
   function cargarScript(src, listo) {
@@ -507,40 +496,6 @@
     s.src = src; s.onload = listo || null;
     s.onerror = function () { aviso('No se pudo cargar una parte del portal. Revisa tu conexión.'); };
     document.head.appendChild(s);
-  }
-
-  /* Clave extra: solo aparece para el usuario de prueba */
-  function preguntarAdmin() {
-    var m = document.createElement('div');
-    m.className = 'modal';
-    m.innerHTML = '<form class="modal-caja" role="dialog" aria-modal="true" aria-labelledby="admTit" novalidate>' +
-      '<div class="modal-cab"><div class="nm-patron oscuro" aria-hidden="true"></div>' +
-        '<div class="modal-fila"><img class="iso" src="marca/logos/nummeros-isotipo-blanco.svg" alt=""><span class="modal-chip">' + ic('candado') + 'Acceso restringido</span></div>' +
-        '<h3 id="admTit">Clave de administrador</h3></div>' +
-      '<div class="modal-cuerpo"><p>Si tienes la clave, escríbela para editar anuncios, avisos y preguntas. Si no, sigue como usuario de prueba.</p>' +
-        '<div class="fm-campo"><label for="admClave">Clave</label><input id="admClave" type="password" autocomplete="current-password" required></div>' +
-        '<div class="nm-login-err" id="admErr" role="alert"></div></div>' +
-      '<div class="modal-pie"><button type="button" class="btn sec" data-seguir>Seguir sin clave</button><button class="btn" type="submit" id="admBtn">Entrar</button></div>' +
-      '<div class="modal-firma"><b>CONTAX · NUMMEROS</b><span>Panel de administrador</span></div></form>';
-    document.body.appendChild(m);
-    var inp = m.querySelector('#admClave');
-    inp.focus();
-    m.querySelector('[data-seguir]').addEventListener('click', function () {
-      m.remove(); if (!S.avisosVistos) { S.avisosVistos = true; mostrarAvisos(); }
-    });
-    m.querySelector('form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var err = m.querySelector('#admErr'), btn = m.querySelector('#admBtn');
-      if (!inp.value) { err.textContent = 'Escribe la clave.'; return; }
-      btn.disabled = true; btn.textContent = 'Verificando…'; err.textContent = '';
-      auth.signInWithEmailAndPassword(C.correoAdmin, inp.value).then(function () {
-        m.remove();   // onAuthStateChanged recarga el portal en modo administrador
-      }, function (ex) {
-        btn.disabled = false; btn.textContent = 'Entrar';
-        err.textContent = /too-many/.test(ex && ex.code) ? 'Demasiados intentos. Espera unos minutos.' : 'Clave incorrecta.';
-        inp.value = ''; inp.focus();
-      });
-    });
   }
 
   function pintarMenus() {
@@ -552,7 +507,7 @@
       return '<button class="nav-link' + (S.pagina === m.id ? ' active' : '') + '" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span>' + c + '</button>';
     }).join('') +
       '<div class="nav-pie"><img src="marca/logos/nummeros-logotipo-firma-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS by CONTAX">Portal CONTAX · v' + esc(C.version) + '</div>';
-    var enMas = ['historial', 'reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0 || /^admin/.test(S.pagina);
+    var enMas = ['historial', 'reporte', 'preguntas', 'contacto', 'notificaciones', 'instalar', 'servicios', 'tutoriales'].indexOf(S.pagina) >= 0;
     document.getElementById('tabbar').innerHTML = TABS.map(function (t) {
       var on = t.id === S.pagina || (t.id === 'mas' && enMas);
       return '<button class="' + (on ? 'on' : '') + '" ' + (t.id === 'mas' ? 'data-accion="mas"' : 'data-ir="' + t.id + '"') + '><i>' + ic(t.i) + '</i>' + t.t + '</button>';
@@ -1035,9 +990,6 @@
         if (!seccionVisible(m[3])) return '';
         return '<button class="nav-link" data-ir="' + m[0] + '">' + ic(m[2]) + '<span>' + m[1] + '</span>' + (seccionOculta(m[3]) ? '<span class="cuenta oculta">Oculta</span>' : '') + '</button>';
       }).join('') +
-      (S.admin ? '<span class="nav-sec">Administración</span>' + MENU_ADMIN.slice(1).map(function (m) {
-        return '<button class="nav-link" data-ir="' + m.id + '">' + ic(m.i) + '<span>' + m.t + '</span></button>';
-      }).join('') : '') +
       '<button class="nav-link" data-accion="tema">' + ic(S.oscuro ? 'sol' : 'luna') + '<span>' + (S.oscuro ? 'Modo claro' : 'Modo oscuro') + '</span></button>' +
       '<button class="nav-link" data-accion="salir" style="color:var(--nm-error)">' + ic('salir') + '<span>Salir</span></button></div>';
     document.body.appendChild(h);
@@ -1119,7 +1071,7 @@
         vistos[a.codigo] = Date.now();
         guardar('nm_avisos_' + (S.datos.id || ''), JSON.stringify(vistos));
       }
-      if (confirmo && a.frecuencia !== 'CADA INGRESO' && !DEMO && !S.admin && !a.previa) {
+      if (confirmo && a.frecuencia !== 'CADA INGRESO' && !DEMO && !a.previa) {
         db.collection('repartidores').doc(S.usuario.uid).collection('lecturas').doc(a.codigo)
           .set({ fecha: firebase.firestore.FieldValue.serverTimestamp(), titulo: String(a.titulo || '').slice(0, 200),
             codigo: a.codigo, id: String(S.datos.id || ''), nombre: String(S.datos.nombre || '').slice(0, 120) })
@@ -1215,7 +1167,6 @@
       encuesta: { titulo: '¿Cómo te atendemos?', texto: 'Tu opinión nos ayuda a mejorar. Son 2 minutos.', textoBoton: 'Calificar el servicio', url: '#' }
     };
     S.lecturas = {};
-    S.admin = /[?&]admin\b/.test(location.search);
     aplicarContenido({
       anuncios: [
         { id: 'a1', activo: true, orden: 1, titulo: 'Contax Consultora', fuente: 'subida:a1', imagen: 'anuncios/1XLpL88BPof26oe3QF5_uesfbYb-tIp6o.png', link: '' },
@@ -1226,11 +1177,10 @@
       preguntas: [].concat.apply([], S.publico.preguntas.map(function (c, i) { return c.preguntas.map(function (q, j) { return { id: 'q' + i + j, activo: true, categoria: c.nombre, p: q.p, r: q.r, orden: j + 1 }; }); }))
     });
     mostrarCarga();
-    if (S.admin && !window.NM_ADMIN) { cargarScript('admin.js', function () { trasCarga(arrancarApp); }); return; }
     trasCarga(arrancarApp);
   }
 
-  /* Lo que usan admin.js, reporte.js y chat.js */
+  /* Lo que usan facturas.js, reporte.js, chat.js y notificaciones.js */
   var API = window.NM = {
     S: S, C: C, DEMO: DEMO, db: function () { return db; }, auth: function () { return auth; },
     esc: esc, ic: ic, bs: bs, numero: numero, titulo: titulo, vacio: vacio, aviso: aviso, ir: ir,

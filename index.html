@@ -383,11 +383,7 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .segmento button{border:1px solid var(--nm-borde-control);background:var(--nm-superficie);color:var(--nm-texto);border-radius:999px;padding:7px 14px;font:600 13px var(--nm-display);letter-spacing:.03em;cursor:pointer}
 .segmento button.on{background:var(--nm-boton);border-color:var(--nm-boton);color:var(--nm-sobre-boton)}
 .rep-kpis{grid-template-columns:1fr 1fr;align-content:start}
-.rep-kpis .nm-kpi,.adm-kpis div.nm-kpi{cursor:default}
-.adm-kpis{grid-template-columns:repeat(4,1fr);margin-bottom:14px}
-@media (max-width:860px){.adm-kpis{grid-template-columns:1fr 1fr}}
-.adm-rapidos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:480px){.adm-rapidos{grid-template-columns:1fr}}
+.rep-kpis .nm-kpi{cursor:default}
 .btn.peligro{background:var(--nm-error);border-color:var(--nm-error);color:#fff}
 .icono{width:36px;height:36px;display:inline-grid;place-items:center;border-radius:10px;border:1px solid var(--nm-borde);background:var(--nm-superficie);color:var(--nm-texto);cursor:pointer}
 .icono:hover:not(:disabled){background:var(--nm-campo);border-color:var(--verde-300)}
@@ -395,28 +391,6 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .icono.peligro{color:var(--nm-error)}
 .icono .ic svg{width:18px;height:18px}
 .enlace{background:none;border:0;padding:0;color:var(--nm-acento);font:600 12.5px var(--nm-cuerpo);text-decoration:underline;cursor:pointer}
-.adm-lista{display:flex;flex-direction:column}
-.adm-item{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--nm-borde)}
-.adm-item:last-child{border-bottom:0;padding-bottom:0}
-.adm-item:first-child{padding-top:0}
-.adm-mini{flex:none;width:132px;aspect-ratio:16/7;border-radius:10px;overflow:hidden;background:var(--nm-campo);display:grid;place-items:center;border:1px solid var(--nm-borde)}
-.adm-mini img{width:100%;height:100%;object-fit:cover}
-.adm-mini span{font-size:12px;color:var(--nm-suave)}
-.adm-tipo{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--nm-ok-bg);color:var(--nm-ok)}
-.aviso-IMPORTANTE .adm-tipo{background:var(--nm-aviso-bg);color:var(--nm-aviso)}
-.aviso-URGENTE .adm-tipo{background:var(--nm-error-bg);color:var(--nm-error)}
-.adm-info{flex:1;min-width:0}
-.adm-info>b{display:block;font:600 16px/1.25 var(--nm-display);letter-spacing:.01em}
-.adm-extracto{font-size:13px;color:var(--nm-suave);margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.adm-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:7px;font-size:12.5px;color:var(--nm-suave)}
-.adm-acc{display:flex;gap:6px;flex:none}
-@media (max-width:640px){
-  .adm-item{flex-wrap:wrap}
-  .adm-mini{width:96px}
-  .adm-info{flex-basis:calc(100% - 112px)}
-  .adm-tipo+.adm-info{flex-basis:calc(100% - 56px)}
-  .adm-acc{width:100%;justify-content:flex-end}
-}
 .modal-caja.fm{max-width:560px}
 .fm .modal-cuerpo{padding-top:16px}
 /* Mis facturas */
@@ -448,12 +422,6 @@ body.dark-mode .modal-cuerpo strong{color:var(--verde-100);background:linear-gra
 .fm-img-acc{display:flex;gap:8px;flex-wrap:wrap}
 .fm-img-acc label.btn{margin:0;font:600 13px var(--nm-display);letter-spacing:.03em;color:var(--nm-sobre-boton)}
 .fm-img-link{margin-top:10px}
-.chat-registro{display:flex;flex-direction:column;gap:10px}
-.chat-registro article{border:1px solid var(--nm-borde);border-radius:12px;padding:12px 14px}
-.cr-cab{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--nm-suave);margin-bottom:6px}
-.cr-cab b{font:600 14px var(--nm-display);color:var(--nm-texto)}
-.cr-p{font-weight:600;margin-bottom:4px}
-.cr-r{color:var(--nm-suave);font-size:14px;white-space:pre-line}
 
 /* Servicios y tutoriales */
 .cuenta.oculta{background:var(--nm-aviso-bg);color:var(--nm-aviso);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px}
@@ -582,14 +550,14 @@ body.dark-mode .msg.ia strong{color:var(--verde-100)}
 </div>
 <noscript><p style="padding:24px;text-align:center">Para usar el Portal CONTAX necesitas activar JavaScript en tu navegador.</p></noscript>
 
-<script src="config.js?v=3.12"></script>
+<script src="config.js?v=3.13"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
-<script src="app.js?v=3.12"></script>
-<script src="facturas.js?v=3.12"></script>
-<script src="chat.js?v=3.12"></script>
-<script src="notificaciones.js?v=3.12"></script>
+<script src="app.js?v=3.13"></script>
+<script src="facturas.js?v=3.13"></script>
+<script src="chat.js?v=3.13"></script>
+<script src="notificaciones.js?v=3.13"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 Página para el **celular de los repartidores de Yango**: ven sus pagos pendientes e historial, suben su
 factura en PDF ("Mis facturas"), ven trámites (soporte, pólizas, devoluciones, desactivación), anuncios,
 avisos, preguntas frecuentes, descargan su reporte en PDF, reciben notificaciones y usan un asistente con IA.
-Reemplazó al portal viejo que vivía en Google Apps Script. El equipo lo administra desde **CONTROL** (repo `CONTROL-NUMMEROS`).
+Reemplazó al portal viejo que vivía en Google Apps Script. **Toda la administración (anuncios, avisos, preguntas, notificaciones, chats y su archivo) se hace desde CONTROL** (repo `CONTROL-NUMMEROS`); el portal ya no tiene panel de administrador.
 
 ## Para qué empresa
 CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.** (razón social/NIT en `config.js`).
@@ -12,7 +12,6 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 ## Cómo está armado (archivos principales)
 - `index.html` — página y diseño. `app.js` — lógica principal (login, inicio, pagos, trámites…).
 - `facturas.js` (Mis facturas), `reporte.js` (PDF), `chat.js` (asistente), `notificaciones.js` + `firebase-messaging-sw.js` (avisos al celular).
-- `admin.js` — panel de administrador viejo dentro del portal (sigue funcionando; CONTROL lo reemplaza).
 - `config.js` — versión, Firebase, WhatsApp, URL del asistente, secciones ocultas, reglas de pago y `fuentePagos` (`'sheets'` = pagos desde el robot de Google Sheets, como hoy; `'control'` = pagos desde la colección `semanas` que llena CONTROL, con estados Pendiente / Enviado a pagar / Pagado / No habilitado). Se cambia junto con `fuentePagos` de CONTROL.
 - `firestore.rules` — reglas del proyecto `portal-nummeros`.
 - `sync/` — robot Node.js que copia Google Sheets → Firebase (`config.mjs` = hojas, columnas, trámites; `probar.mjs` = prueba sin internet).
@@ -32,7 +31,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Asistente:** `asistente.yml` lo publica en Cloudflare al cambiar `asistente/`. Secretos: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
-- Versiones: `version` en `config.js` (hoy 3.12) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.13) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -42,3 +41,4 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - Las imágenes de `anuncios/` quedan públicas en GitHub.
 - La forma de iniciar sesión y la cuenta de prueba tienen riesgos: ver aviso de seguridad.
 - Este proyecto Firebase también lo usa CONTROL; las cuentas del equipo las crea el puente del Panel (`NUMMEROS_CRM`).
+- La cuenta de administrador vieja (`admin@portalnummeros.app`, la crea el robot con `ADMIN_CLAVE`) ya no entra al portal: se le muestra que la administración está en CONTROL. El usuario de prueba `1234` sigue funcionando como repartidor de prueba.
