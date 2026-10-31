@@ -175,13 +175,10 @@
     }
     auth.onAuthStateChanged(function (u) {
       S.usuario = u;
-      if (!u) { S.datos = null; pintarLogin(S.motivoSalida); S.motivoSalida = null; return; }
+      if (!u) { S.datos = null; pintarLogin(); return; }
       u.getIdTokenResult().then(function (t) {
-        // La administración del portal se mudó a CONTROL: la cuenta de administrador vieja ya no entra aquí
-        if (t.claims && t.claims.admin) {
-          S.motivoSalida = 'La administración (anuncios, avisos, preguntas, notificaciones y chats) ahora está en CONTROL: ' + C.controlUrl + ' (entra con tu usuario del Panel NUMMEROS).';
-          auth.signOut(); return;
-        }
+        // La administración se mudó a CONTROL: la cuenta de administrador vieja se cierra sin mensaje
+        if (t.claims && t.claims.admin) { auth.signOut(); return; }
         cargarDatos();
       }, function () { cargarDatos(); });
     });

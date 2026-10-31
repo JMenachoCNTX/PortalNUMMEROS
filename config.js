@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.14',
+  version: '3.15',
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
@@ -22,9 +22,6 @@ window.PORTAL = {
      IMPORTANTE: debe ser igual a sync/config.mjs. No lo cambies después
      de la primera sincronización. */
   dominioUsuarios: 'repartidores.portalnummeros.app',
-
-  /* La administración (anuncios, avisos, preguntas, notificaciones, chats) se hace en CONTROL */
-  controlUrl: 'https://jmenachocntx.github.io/CONTROL-NUMMEROS/',
 
   /* Asistente con IA (DeepSeek a través de Cloudflare). Vacío = apagado. */
   ia: { url: 'https://portal-nummeros-ia.jhonnymenacho04.workers.dev' },

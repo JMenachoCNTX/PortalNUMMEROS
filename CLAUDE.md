@@ -31,7 +31,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Asistente:** `asistente.yml` lo publica en Cloudflare al cambiar `asistente/`. Secretos: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
-- Versiones: `version` en `config.js` (hoy 3.14) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.15) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -41,5 +41,5 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - Las imágenes de `anuncios/` quedan públicas en GitHub.
 - La forma de iniciar sesión y la cuenta de prueba tienen riesgos: ver aviso de seguridad.
 - Este proyecto Firebase también lo usa CONTROL; las cuentas del equipo las crea el puente del Panel (`NUMMEROS_CRM`).
-- La cuenta de administrador vieja (`admin@portalnummeros.app`, la crea el robot con `ADMIN_CLAVE`) ya no entra al portal: se le muestra que la administración está en CONTROL. El usuario de prueba `1234` sigue funcionando como repartidor de prueba.
+- La cuenta de administrador vieja (`admin@portalnummeros.app`, la crea el robot con `ADMIN_CLAVE`) ya no entra al portal: se cierra su sesión sin ningún mensaje (los repartidores no deben ver nada de la administración). El usuario de prueba `1234` sigue funcionando como repartidor de prueba.
 - «Mis facturas» pide el **NIT del emisor** (se recuerda el último): CONTROL lo usa para verificar la factura en el Registro de Compras de Impuestos Nacionales.
