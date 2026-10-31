@@ -50,6 +50,7 @@ service cloud.firestore {
       allow create: if puedeEditar() || (conSesion() && request.resource.data.uid == request.auth.uid
         && request.resource.data.estado == 'recibida'
         && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'semanas', 'numero', 'importe', 'fechaEmision', 'nitEmisor',
+             'razonEmisor', 'autorizacion', 'leidaIA',
              'nombreArchivo', 'tamano', 'paginas', 'estado', 'subido', 'fueraDeCorte', 'corte', 'nota'])
         && request.resource.data.semanas is list && request.resource.data.semanas.size() <= 12
         && request.resource.data.numero is string && request.resource.data.numero.size() <= 30
@@ -97,6 +98,17 @@ service cloud.firestore {
     // Notificaciones que manda el administrador (el robot las envía)
     match /colaNotif/{id} {
       allow read, create: if esAdmin();
+    }
+
+    // NIT y razón social de cada repartidor: los registra él UNA sola vez desde el portal;
+    // después solo el equipo de CONTROL los puede cambiar. Con ellos se revisan sus facturas.
+    match /perfiles/{uid} {
+      allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
+      allow create: if puedeEditar() || (conSesion() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nit', 'razonSocial', 'creado'])
+        && request.resource.data.nit is string && request.resource.data.nit.matches('^[0-9]{5,15}$')
+        && request.resource.data.razonSocial is string && request.resource.data.razonSocial.size() >= 3 && request.resource.data.razonSocial.size() <= 160);
+      allow update, delete: if puedeEditar();
     }
 
     // Semanas de pago (una por repartidor y semana). Las escribe CONTROL al importar las
