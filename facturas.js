@@ -111,7 +111,10 @@
         '<div class="fm-campo"><label for="facNum">N.º de factura</label><input id="facNum" inputmode="numeric" maxlength="30" required placeholder="1245"></div>' +
         '<div class="fm-campo"><label for="facImp">Importe (Bs)</label><input id="facImp" inputmode="decimal" required></div>' +
       '</div>' +
-      '<div class="fm-campo"><label for="facFecha">Fecha de emisión</label><input id="facFecha" type="date" required></div>' +
+      '<div class="grid2" style="gap:12px">' +
+        '<div class="fm-campo"><label for="facNit">Tu NIT (el que emite la factura)</label><input id="facNit" inputmode="numeric" maxlength="15" required placeholder="8130553010"></div>' +
+        '<div class="fm-campo"><label for="facFecha">Fecha de emisión</label><input id="facFecha" type="date" required></div>' +
+      '</div>' +
       '<div class="fm-campo"><label for="facPdf">Archivo PDF</label><input id="facPdf" type="file" accept="application/pdf,.pdf" required>' +
         '<small>Solo PDF, hasta 700 KB. Es el PDF que descargas del SIAT, no una foto.</small></div>' +
       '<div class="fm-campo"><label for="facNota">Comentario (opcional)</label><textarea id="facNota" maxlength="300" rows="2"></textarea></div>' +
@@ -172,16 +175,23 @@
     poner();
     fm.querySelectorAll('input[name=sem]').forEach(function (c) { c.addEventListener('change', poner); });
     fm.querySelector('#facFecha').value = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
+    // El NIT se recuerda: el de la última factura subida o el que se guardó en este celular
+    var claveNit = 'nm_nit_' + String((S.datos || {}).id || ''), nitPrevio = '';
+    (lista || []).some(function (f) { if (f.nitEmisor) { nitPrevio = f.nitEmisor; return true; } return false; });
+    try { nitPrevio = nitPrevio || localStorage.getItem(claveNit) || ''; } catch (ex) { }
+    fm.querySelector('#facNit').value = nitPrevio;
     fm.addEventListener('submit', function (e) {
       e.preventDefault();
       var err = fm.querySelector('#facErr'), btn = fm.querySelector('#facBtn');
       err.textContent = '';
       var semanas = [].map.call(fm.querySelectorAll('input[name=sem]:checked'), function (c) { return c.value; });
       var numero = fm.querySelector('#facNum').value.trim().replace(/\s+/g, '');
+      var nit = fm.querySelector('#facNit').value.replace(/\D/g, '');
       var importe = numeroDe(imp.value), fecha = fm.querySelector('#facFecha').value;
       var archivo = fm.querySelector('#facPdf').files[0], nota = fm.querySelector('#facNota').value.trim();
       if (!semanas.length) { err.textContent = 'Marca al menos una semana.'; return; }
       if (!numero) { err.textContent = 'Escribe el número de la factura.'; return; }
+      if (!/^\d{5,15}$/.test(nit)) { err.textContent = 'Escribe tu NIT tal como aparece en la factura (solo números).'; return; }
       if (!importe || importe <= 0) { err.textContent = 'Escribe el importe de la factura.'; return; }
       if (!fecha) { err.textContent = 'Elige la fecha de emisión.'; return; }
       var suma = sumaMarcadas(fm);
@@ -195,14 +205,17 @@
         lote.set(db.collection('facturasPdf').doc(ref.id), { uid: N.auth().currentUser.uid, datos: datos });
         var doc = {
           uid: N.auth().currentUser.uid, id: String(d.id || ''), nombre: String(d.nombre || '').slice(0, 120),
-          semanas: semanas, numero: numero, importe: Math.round(importe * 100) / 100, fechaEmision: fecha,
+          semanas: semanas, numero: numero, importe: Math.round(importe * 100) / 100, fechaEmision: fecha, nitEmisor: nit,
           nombreArchivo: String(archivo.name || 'factura.pdf').slice(0, 120), tamano: archivo.size,
           estado: 'recibida', subido: firebase.firestore.FieldValue.serverTimestamp(),
           corte: k.iso, fueraDeCorte: b.getUTCDay() === 5 || (b.getUTCDay() === 4 && b.getUTCHours() >= 18)
         };
         if (nota) doc.nota = nota.slice(0, 300);
         lote.set(ref, doc);
-        return lote.commit().then(function () { N.aviso('Factura enviada. Te avisamos aquí cuando la revisemos.'); N.ir('facturas', true); });
+        return lote.commit().then(function () {
+          try { localStorage.setItem(claveNit, nit); } catch (ex) { }
+          N.aviso('Factura enviada. Te avisamos aquí cuando la revisemos.'); N.ir('facturas', true);
+        });
       }).catch(function (ex) {
         console.error(ex);
         err.textContent = ex && ex.message && !/permission|insufficient/i.test(ex.message) ? ex.message : 'No se pudo enviar. Revisa tu conexión e intenta de nuevo.';
