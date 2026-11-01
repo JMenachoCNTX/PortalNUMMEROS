@@ -222,7 +222,9 @@
       db.collection('repartidores').doc(uid).collection('lecturas').get(),
       db.collection('perfiles').doc(uid).get().catch(function () { return null; }),
       // Con fuentePagos 'control' los pagos salen de «semanas» (las escribe CONTROL)
-      C.fuentePagos === 'control' ? db.collection('semanas').where('uid', '==', uid).get() : Promise.resolve(null)
+      C.fuentePagos === 'control' ? db.collection('semanas').where('uid', '==', uid).get() : Promise.resolve(null),
+      // y el historial anterior (HistPagosMTG migrado por CONTROL)
+      C.fuentePagos === 'control' ? db.collection('historialRider').doc(uid).get().catch(function () { return null; }) : Promise.resolve(null)
     ]).then(function (r) {
       if (!r[0].exists) {
         pintarMensaje('Tus datos se están preparando',
@@ -231,7 +233,7 @@
       }
       S.datos = r[0].data();
       S.perfil = r[4] && r[4].exists ? r[4].data() : null;
-      if (r[5]) aplicarSemanas(S.datos, r[5]);
+      if (r[5]) aplicarSemanas(S.datos, r[5], r[6] && r[6].exists ? r[6].data() : null);
       S.publico = r[1].exists ? r[1].data() : {};
       aplicarContenido(r[2].exists ? r[2].data() : {});
       S.lecturas = {};
@@ -245,14 +247,27 @@
 
   /* Semanas de pago desde la colección «semanas»: arma pendientes, historial y la lista completa de semanas.
      Estados: pendiente · en_planilla («Enviado a pagar») · pagado · no_habilitado (importe 0) */
-  function aplicarSemanas(d, q) {
+  function aplicarSemanas(d, q, hr) {
     var l = []; q.forEach(function (x) { l.push(x.data()); });
+    // Pagos anteriores (HistPagosMTG): [semana, rango, importe, fechaPago ISO, nroFactura]; no se repiten los que ya están en «semanas»
+    var filas = []; try { filas = hr ? JSON.parse(hr.filas || '[]') : []; } catch (e) { filas = []; }
+    var ordenDe = function (t) {
+      var x = String(t || ''), m = x.match(/G\s*(\d{2,4})\s*$/i), a = m ? Number(m[1].length === 2 ? '20' + m[1] : m[1]) : Number((x.match(/20\d\d/) || [0])[0]);
+      var n = Number((x.replace(/G\s*\d{2,4}\s*$/i, '').match(/(\d{1,2})/) || [0, 0])[1]);
+      return (a || 0) * 100 + n;
+    };
+    var ya = {}; l.forEach(function (s) { if (s.estado === 'pagado') ya[(s.orden || ordenDe(s.semana)) + '|' + Math.round((Number(s.importe) || 0) * 100)] = 1; });
+    filas.forEach(function (f) {
+      var o = ordenDe(f[0]), k = o + '|' + Math.round((Number(f[2]) || 0) * 100);
+      if (ya[k]) return; ya[k] = 1;
+      l.push({ semana: f[0], rango: f[1], importe: Number(f[2]) || 0, estado: 'pagado', fechaPago: f[3], orden: o, factura: f[4] });
+    });
     l.sort(function (a, b) { return (b.orden || 0) - (a.orden || 0); });
     var fecha = function (iso) { var m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(iso || ''); };
     var suma = function (x) { return Math.round(x.reduce(function (t, s) { return t + s.importe; }, 0) * 100) / 100; };
     d.semanas = l.map(function (s) {
       return { semana: s.semana, rango: s.rango || '', importe: Number(s.importe) || 0, tipo: s.estado, ganancias: Number(s.ganancias) || 0, anterior: Number(s.importeAnterior) || 0,
-        fechaPago: s.fechaPago ? fecha(s.fechaPago) : '', fuera: s.fueraDePlanilla ? s.fueraDePlanilla.motivo : '', rebote: !!s.rebote };
+        fechaPago: s.fechaPago ? fecha(s.fechaPago) : '', factura: s.factura || '', fuera: s.fueraDePlanilla ? s.fueraDePlanilla.motivo : '', rebote: !!s.rebote };
     });
     d.pendientes = d.semanas.filter(function (s) { return s.tipo === 'pendiente' || s.tipo === 'en_planilla'; }).map(function (s) {
       return Object.assign({}, s, { enPlanilla: s.tipo === 'en_planilla', estado: s.tipo === 'en_planilla' ? 'Enviado a pagar' : s.fuera ? 'No entró a la planilla' : s.rebote ? 'Devuelto por el banco' : 'Pendiente' });

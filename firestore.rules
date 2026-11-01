@@ -146,6 +146,12 @@ service cloud.firestore {
       allow write: if puedeEditar();
     }
 
+    // Historial de pagos de cada repartidor (migrado de HistPagosMTG por CONTROL). Lo lee solo él.
+    match /historialRider/{uid} {
+      allow read: if esAdmin() || esRepartidor(uid);
+      allow write: if puedeEditar();
+    }
+
     // Lo último que hizo la sincronización (para el tablero de CONTROL)
     match /privado/estado {
       allow read: if esEquipo();

@@ -43,7 +43,7 @@ window.PORTAL = {
   /* De dónde salen los pagos: 'sheets' = Google Sheets (robot sync/), como hoy.
      'control' = colección «semanas» que llena CONTROL (estados Pendiente, Enviado a pagar, Pagado, No habilitado).
      Se cambia a 'control' el mismo día que CONTROL (ver INTEGRACION-NUCLEO-YANGO.md). */
-  fuentePagos: 'sheets',
+  fuentePagos: 'control',
   /* Mis documentos: vigencia que debe tener la Matrícula de Comercio de la gestión actual,
      gestión de los estados financieros que se piden y cuántos meses de declaraciones se muestran */
   documentos: { matriculaHasta: '2027-05-31', gestionEEFF: '2025', meses: 6 },
