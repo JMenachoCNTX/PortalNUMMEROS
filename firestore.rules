@@ -139,6 +139,13 @@ service cloud.firestore {
       allow write: if puedeEditar();
     }
 
+    // Historial de pagos de CONTROL (reemplaza la hoja HistPagosMTG): un documento por fecha de pago.
+    // Solo el equipo; el repartidor ve sus pagos en «semanas».
+    match /historialPagos/{id} {
+      allow read: if esEquipo();
+      allow write: if puedeEditar();
+    }
+
     // Lo último que hizo la sincronización (para el tablero de CONTROL)
     match /privado/estado {
       allow read: if esEquipo();
