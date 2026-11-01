@@ -12,7 +12,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 ## Cómo está armado (archivos principales)
 - `index.html` — página y diseño. `app.js` — lógica principal (login, inicio, pagos, trámites…).
 - `facturas.js` (Mis facturas), `reporte.js` (PDF), `chat.js` (asistente), `notificaciones.js` + `firebase-messaging-sw.js` (avisos al celular).
-- `config.js` — versión, Firebase, WhatsApp, URL del asistente, secciones ocultas, reglas de pago y `fuentePagos` (`'sheets'` = pagos desde el robot de Google Sheets, como hoy; `'control'` = pagos desde la colección `semanas` que llena CONTROL, con estados Pendiente / Enviado a pagar / Pagado / No habilitado). Se cambia junto con `fuentePagos` de CONTROL.
+- `config.js` — `mantenimiento` (true = pantalla «Portal EN MANTENIMIENTO»; el equipo prueba con `?probar=1`), versión, Firebase, WhatsApp, URL del asistente, secciones ocultas, reglas de pago y `fuentePagos` (`'sheets'` = pagos desde el robot de Google Sheets, como hoy; `'control'` = pagos desde la colección `semanas` que llena CONTROL, con estados Pendiente / Enviado a pagar / Pagado / No habilitado). Se cambia junto con `fuentePagos` de CONTROL.
 - `firestore.rules` — reglas del proyecto `portal-nummeros`.
 - `sync/` — robot Node.js que copia Google Sheets → Firebase (`config.mjs` = hojas, columnas, trámites; `probar.mjs` = prueba sin internet).
 - `asistente/` — Cloudflare Worker (DeepSeek) del asistente con IA.
@@ -31,7 +31,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Asistente:** `asistente.yml` lo publica en Cloudflare al cambiar `asistente/`. Secretos: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
-- Versiones: `version` en `config.js` (hoy 3.18) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.19) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -46,3 +46,4 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **NIT una sola vez:** al entrar se pide NIT y razón social (colección `perfiles`). Después solo el equipo lo cambia desde CONTROL.
 - **Sin `GEMINI_API_KEY` no se pueden subir facturas**: no publicar cambios del lector sin la clave cargada.
 - **Mis documentos** (`documentos.js`): NIT, Matrícula de Comercio (con vigencia; `config.js → documentos.matriculaHasta`), ROE, RCV/F-200/F-400 de los últimos meses y estados financieros (`documentos.gestionEEFF`). Colecciones `documentos` (estado) y `documentosArchivo` (archivo, máx. 700 KB). Se revisan en CONTROL → Documentos.
+- **Pagos desde CONTROL (desde 31/10/2026):** `fuentePagos: 'control'`. Pendientes y semanas nuevas en `semanas`; el historial anterior (HistPagosMTG migrado) en `historialRider/{uid}` (`filas` JSON: semana, rango, importe, fecha de pago, N.º factura). No se repiten semanas que ya estén pagadas en `semanas`.
