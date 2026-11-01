@@ -169,6 +169,7 @@
 
   function iniciar() {
     aplicarTema();
+    if (C.mantenimiento && !/[?&]probar\b/.test(location.search)) { pintarMantenimiento(); return; }
     if (DEMO) {
       if (leer('nm_demo_sesion') === '1') { cargarDemo(); } else { pintarLogin(); }
       return;
@@ -314,6 +315,13 @@
       .sort(function (a, b) { return (peso[a.tipo] == null ? 2 : peso[a.tipo]) - (peso[b.tipo] == null ? 2 : peso[b.tipo]); });
   }
 
+  function pintarMantenimiento() {
+    app.innerHTML = '<div class="nm-pantalla"><div class="nm-patron" aria-hidden="true"></div>' +
+      '<img src="marca/logos/nummeros-logotipo-apilado-' + (S.oscuro ? 'claro' : 'principal') + '.svg" alt="NUMMEROS">' +
+      '<div style="max-width:380px"><div class="nm-login-titulo">Portal EN MANTENIMIENTO</div>' +
+      '<p class="muted" style="margin-top:6px">Estamos mejorando el portal para mostrarte tus pagos más rápido. Por ahora no está en servicio. Vuelve en unas horas.</p></div>' +
+      '<a class="btn sec" href="' + wa(C.whatsappGeneral, 'Hola, tengo una consulta mientras el Portal CONTAX está en mantenimiento.') + '" target="_blank" rel="noopener">Escribir por WhatsApp</a></div>';
+  }
   function pintarMensaje(titulo, texto) {
     clearInterval(cargaPaso); cargaDesde = 0;
     app.innerHTML = '<div class="nm-pantalla"><div class="nm-patron" aria-hidden="true"></div>' +

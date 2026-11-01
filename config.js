@@ -3,7 +3,10 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.18',
+  version: '3.19',
+
+  /* true = el portal muestra «EN MANTENIMIENTO» y nadie entra (el equipo prueba con ?probar=1 en la dirección) */
+  mantenimiento: true,
 
   /* Datos de tu proyecto de Firebase (Consola de Firebase → ⚙ Configuración
      del proyecto → Tus apps → Web). Estos datos NO son secretos: Google los
