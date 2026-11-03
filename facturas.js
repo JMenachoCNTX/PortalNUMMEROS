@@ -164,7 +164,8 @@
       'La factura debe estar a nombre de ' + mil.razonSocial + ' con NIT ' + mil.nit + '. Está a nombre de «' + (d.razonSocialComprador || '—') + '» (NIT ' + (d.nitComprador || '—') + ').');
     punto(digitos(d.nitEmisor) && digitos(d.nitEmisor) === digitos(p.nit), 'Emitida con tu NIT ' + p.nit,
       'La factura fue emitida con el NIT ' + (d.nitEmisor || '—') + ', pero tu NIT registrado es ' + p.nit + '. Si tu NIT cambió, escríbenos para actualizarlo.');
-    punto(mismoNombre(d.razonSocialEmisor, p.razonSocial) !== false, 'Emitida por ' + (d.razonSocialEmisor || '—'),
+    // Si el NIT lo cargó CONTAX desde sus facturas anteriores (origen «historial»), la razón social puede no ser exacta: no se exige
+    punto(p.origen === 'historial' || mismoNombre(d.razonSocialEmisor, p.razonSocial) !== false, 'Emitida por ' + (d.razonSocialEmisor || '—'),
       'La factura la emite «' + (d.razonSocialEmisor || '—') + '», pero tu razón social registrada es «' + p.razonSocial + '».');
     var repetida = (lista || []).some(function (f) { return f.estado !== 'anulada' && f.estado !== 'rechazada' && digitos(f.numero) === digitos(d.numeroFactura) && (!f.nitEmisor || digitos(f.nitEmisor) === digitos(d.nitEmisor)); });
     punto(d.numeroFactura && !repetida, 'Factura N.º ' + d.numeroFactura, d.numeroFactura ? 'Ya subiste la factura N.º ' + d.numeroFactura + '.' : 'No se encontró el número de la factura.');

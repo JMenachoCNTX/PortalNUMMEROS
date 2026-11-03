@@ -31,7 +31,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Asistente:** `asistente.yml` lo publica en Cloudflare al cambiar `asistente/`. Secretos: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
-- Versiones: `version` en `config.js` (hoy 3.24) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.25) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -51,3 +51,4 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Sin `GEMINI_API_KEY` no se pueden subir facturas**: no publicar cambios del lector sin la clave cargada.
 - **Mis documentos** (`documentos.js`): NIT, Matrícula de Comercio (con vigencia; `config.js → documentos.matriculaHasta`), ROE, RCV/F-200/F-400 de los últimos meses y estados financieros (`documentos.gestionEEFF`). Colecciones `documentos` (estado) y `documentosArchivo` (archivo, máx. 700 KB). Se revisan en CONTROL → Documentos.
 - **Pagos desde CONTROL (desde 31/10/2026):** `fuentePagos: 'control'`. Pendientes y semanas nuevas en `semanas`; el historial anterior (HistPagosMTG migrado) en `historialRider/{uid}` (`filas` JSON: semana, rango, importe, fecha de pago, N.º factura). No se repiten semanas que ya estén pagadas en `semanas`.
+- **NIT cargado por CONTAX (v3.25):** CONTROL puede crear el perfil con el NIT de las facturas anteriores (`perfiles.origen = 'historial'`); así el portal no lo pide. En esos perfiles no se exige que la razón social de la factura coincida (el NIT sí).
