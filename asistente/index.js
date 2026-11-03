@@ -89,8 +89,9 @@ async function leerFactura(pedido, env, cab) {
   const tipo = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(pedido.tipo) ? pedido.tipo : 'application/pdf';
   // Flash-Lite primero y sin «pensar»: lee bien las facturas del SIAT y responde en segundos.
   // Si un modelo no contesta rápido se pasa al siguiente (antes se esperaba 40 s por modelo).
-  const modelos = [env.MODELO_GEMINI, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-flash-latest'].filter(Boolean);
-  const espera = [15000, 15000, 25000, 30000];
+  // (gemini-2.5-flash-lite ya no existe para cuentas nuevas: Google pide usar gemini-3.5-flash-lite)
+  const modelos = [env.MODELO_GEMINI, 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-flash-latest'].filter(Boolean);
+  const espera = [20000, 20000, 25000];
   let ultimo = '', inicio = Date.now(); const errores = [];
   for (let i = 0; i < modelos.length; i++) {
     const m = modelos[i];
@@ -107,16 +108,16 @@ async function leerFactura(pedido, env, cab) {
           systemInstruction: { parts: [{ text: LECTOR }] },
           generationConfig: gen
         })
-      }); } catch (e) { r = null; ultimo = 'tiempo'; console.log('Gemini', m, 'sin respuesta a tiempo'); } finally { clearTimeout(reloj); }
+      }); } catch (e) { r = null; ultimo = 'tiempo'; errores.push(m + ' → sin respuesta en ' + Math.round((espera[i] || 25000) / 1000) + ' s'); console.log('Gemini', m, 'sin respuesta a tiempo'); } finally { clearTimeout(reloj); }
       // Si el modelo no acepta apagar el «pensamiento», se repite sin esa opción
-      if (r && r.status === 400 && sinPensar) { const t = await r.text(); if (/think/i.test(t)) { sinPensar = false; continue; } ultimo = '400 ' + t.slice(0, 200); r = null; }
+      if (r && r.status === 400 && sinPensar) { const t = await r.text(); if (/think/i.test(t)) { sinPensar = false; continue; } ultimo = '400 ' + t.slice(0, 200); errores.push(m + ' → 400 ' + t.slice(0, 200)); r = null; }
       break;
     }
     if (!r) continue;
     if (!r.ok) { const tx = await r.text(); ultimo = r.status + ' ' + tx.slice(0, 200); errores.push(m + ' → ' + r.status + ' ' + ((tx.match(/"message":\s*"([^"]{0,400})/) || [])[1] || tx.slice(0, 200))); console.log('Gemini', m, ultimo); continue; }
     const j = await r.json();
     const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(p => p.text || '').join('');
-    let d; try { d = JSON.parse(t || '{}'); } catch (e) { ultimo = 'json'; continue; }
+    let d; try { d = JSON.parse(t || '{}'); } catch (e) { ultimo = 'json'; errores.push(m + ' → respuesta no es JSON'); continue; }
     const dig = v => String(v || '').replace(/\D/g, '');
     return respuesta({ datos: {
       esFactura: d.esFactura !== false, nitEmisor: dig(d.nitEmisor), razonSocialEmisor: String(d.razonSocialEmisor || '').trim().slice(0, 160),
