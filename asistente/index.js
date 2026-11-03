@@ -110,7 +110,8 @@ async function leerFactura(pedido, env, cab) {
         })
       }); } catch (e) { r = null; ultimo = 'tiempo'; errores.push(m + ' → sin respuesta en ' + Math.round((espera[i] || 25000) / 1000) + ' s'); console.log('Gemini', m, 'sin respuesta a tiempo'); } finally { clearTimeout(reloj); }
       // Si el modelo no acepta apagar el «pensamiento», se repite sin esa opción
-      if (r && r.status === 400 && sinPensar) { const t = await r.text(); if (/think/i.test(t)) { sinPensar = false; continue; } ultimo = '400 ' + t.slice(0, 200); errores.push(m + ' → 400 ' + t.slice(0, 200)); r = null; }
+      // (los modelos Gemini 3 no aceptan thinkingBudget y responden «invalid argument» sin decir por qué)
+      if (r && r.status === 400 && sinPensar) { const t = await r.text(); if (/think|invalid argument/i.test(t)) { sinPensar = false; continue; } ultimo = '400 ' + t.slice(0, 200); errores.push(m + ' → 400 ' + t.slice(0, 200)); r = null; }
       break;
     }
     if (!r) continue;
