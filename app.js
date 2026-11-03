@@ -529,30 +529,49 @@
       '<div class="modal-cuerpo"><p>Con tu NIT revisamos que las facturas que subes sean tuyas. Escríbelo tal como aparece en tus facturas.</p>' +
         '<div class="fm-campo"><label for="nitNum">NIT</label><input id="nitNum" inputmode="numeric" maxlength="15" autocomplete="off" placeholder="8130553010"></div>' +
         '<div class="fm-campo"><label for="nitRazon">Nombre o razón social (como figura en tu NIT)</label><input id="nitRazon" maxlength="160" value="' + esc(d.nombre || '') + '"></div>' +
+        '<div id="nitConf" style="display:none;text-align:center;padding:6px 0"><p style="margin-bottom:6px">¿Tus datos son correctos?</p>' +
+          '<p style="font-size:1.35em;margin-bottom:4px"><b class="num" id="nitConfNum"></b></p><p style="margin-bottom:10px"><b id="nitConfRaz"></b></p>' +
+          '<p class="muted">Después solo CONTAX puede cambiarlo.</p></div>' +
         '<div class="nm-login-err" id="nitErr" role="alert"></div></div>' +
       '<div class="modal-pie"><button type="button" class="btn sec" data-luego>Todavía no tengo NIT</button><button class="btn" type="submit" id="nitBtn">Guardar</button></div></form>';
     document.body.appendChild(m);
     var num = m.querySelector('#nitNum'), raz = m.querySelector('#nitRazon'), err = m.querySelector('#nitErr'), btn = m.querySelector('#nitBtn'), confirmado = false;
+    var luego = m.querySelector('[data-luego]'), conf = m.querySelector('#nitConf'), partes = m.querySelectorAll('.modal-cuerpo > p, .modal-cuerpo > .fm-campo');
     num.focus();
     var cerrar = function () { m.remove(); if (alTerminar) alTerminar(); };
-    m.querySelector('[data-luego]').addEventListener('click', function () {
+    // Paso 1 = escribir los datos; paso 2 = pantalla de confirmación (Sí, guardar / Corregir)
+    var paso = function (confirmar) {
+      confirmado = confirmar; conf.style.display = confirmar ? '' : 'none'; err.textContent = '';
+      partes.forEach(function (x) { x.style.display = confirmar ? 'none' : ''; });
+      btn.textContent = confirmar ? 'Sí, guardar' : 'Guardar';
+      luego.textContent = confirmar ? 'Corregir' : 'Todavía no tengo NIT';
+      if (!confirmar) num.focus();
+    };
+    var guardado = function (nit, razon) { S.perfil = { nit: nit, razonSocial: razon }; cerrar(); aviso('¡Listo! Tu NIT quedó registrado.'); };
+    luego.addEventListener('click', function () {
+      if (confirmado) { paso(false); return; }
       cerrar(); aviso('Sin NIT no puedes subir facturas. CONTAX te ayuda a sacarlo: escríbenos al WhatsApp.');
     });
-    [num, raz].forEach(function (x) { x.addEventListener('input', function () { confirmado = false; btn.textContent = 'Guardar'; err.textContent = ''; }); });
     m.querySelector('form').addEventListener('submit', function (e) {
       e.preventDefault();
       var nit = num.value.replace(/\D/g, ''), razon = raz.value.trim().replace(/\s+/g, ' ');
       if (!/^\d{5,15}$/.test(nit)) { err.textContent = 'Escribe tu NIT (solo números).'; return; }
       if (razon.length < 3) { err.textContent = 'Escribe tu nombre o razón social.'; return; }
       // Segundo clic para confirmar: después ya no se puede cambiar desde el portal
-      if (!confirmado) { confirmado = true; err.textContent = 'Revisa: NIT ' + nit + ' · ' + razon + '. Después solo CONTAX puede cambiarlo.'; btn.textContent = 'Sí, es correcto'; return; }
-      btn.disabled = true; btn.textContent = 'Guardando…';
+      if (!confirmado) { m.querySelector('#nitConfNum').textContent = 'NIT ' + nit; m.querySelector('#nitConfRaz').textContent = razon; paso(true); return; }
+      btn.disabled = true; luego.disabled = true; btn.textContent = 'Guardando…';
+      var ref = db.collection('perfiles').doc(S.usuario.uid);
       var datos = { nit: nit, razonSocial: razon.slice(0, 160), creado: firebase.firestore.FieldValue.serverTimestamp() };
-      db.collection('perfiles').doc(S.usuario.uid).set(datos).then(function () {
-        S.perfil = { nit: nit, razonSocial: razon }; cerrar(); aviso('NIT guardado.');
-      }, function (ex) {
-        console.error(ex); btn.disabled = false; btn.textContent = 'Guardar'; confirmado = false;
-        err.textContent = /permission|insufficient/i.test(ex && ex.message) ? 'Tu NIT ya estaba registrado. Recarga la página.' : 'No se pudo guardar. Revisa tu conexión.';
+      ref.set(datos).then(function () { guardado(nit, razon); }, function (ex) {
+        console.error(ex);
+        // Si ya estaba registrado (por ejemplo, se guardó en otro intento), se toma el que está guardado
+        ref.get().then(function (d) {
+          if (d.exists) { var x = d.data(); guardado(x.nit, x.razonSocial); return; }
+          throw ex;
+        }).catch(function () {
+          btn.disabled = false; luego.disabled = false; btn.textContent = 'Sí, guardar';
+          err.textContent = 'No se pudo guardar. Revisa tu conexión e intenta de nuevo.';
+        });
       });
     });
   }
