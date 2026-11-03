@@ -26,7 +26,8 @@
       var x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1));
       l.push(x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0'));
     }
-    return l;
+    // Los meses anteriores a «declaracionesDesde» no se piden
+    return l.filter(function (p) { return !CFG.declaracionesDesde || p >= CFG.declaracionesDesde; });
   }
   function nombreMes(p) { var m = p.split('-'); return MESES[Number(m[1]) - 1] + ' ' + m[0]; }
 
@@ -63,7 +64,9 @@
 
   N.PAGINAS.documentos = function () {
     if (!docs) cargar();
-    var anio = CFG.gestionEEFF || String(new Date().getFullYear() - 1);
+    var anio = CFG.gestionEEFF || String(new Date().getFullYear() - 1), pers = periodos();
+    var hoy = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10), eeffYa = !CFG.eeffDesde || hoy >= CFG.eeffDesde;
+    var desde = CFG.declaracionesDesde ? nombreMes(CFG.declaracionesDesde).toLowerCase() : '';
     return N.titulo('Mis documentos', 'Sube aquí tu documentación. El equipo de CONTAX la revisa y ves el estado de cada documento.') +
       (docs == null ? '<div class="card"><p class="muted">Cargando tus documentos…</p></div>' :
       '<div class="card"><div class="h2">Inscripción <small>una sola vez</small></div>' +
@@ -71,14 +74,17 @@
         (CFG.matriculaHasta ? '<p class="muted" style="font-size:13px;margin-top:6px">La Matrícula de Comercio de la gestión actual vence el ' + fechaCorta(CFG.matriculaHasta) + ': súbela actualizada.</p>' : '') +
       '</div>' +
       '<div class="card"><div class="h2">Declaraciones mensuales</div>' +
-        '<p class="muted" style="font-size:13px;margin-bottom:10px">Sube cada mes tu RCV, el Formulario 200 (IVA) y el Formulario 400 (IT). Si eres cliente CONTAX, nosotros las presentamos: no necesitas subirlas.</p>' +
-        periodos().map(function (p) {
+        '<p class="muted" style="font-size:13px;margin-bottom:10px">Sube cada mes tu RCV, el Formulario 200 (IVA) y el Formulario 400 (IT): la declaración de un mes se presenta y se sube el mes siguiente.' +
+          (desde ? ' Las pedimos <b>desde ' + esc(desde) + '</b>; los meses anteriores no hace falta subirlos.' : '') + ' Si eres cliente CONTAX, nosotros las presentamos: no necesitas subirlas.</p>' +
+        (pers.length ? pers.map(function (p) {
           return '<div style="margin:10px 0 4px"><b>' + esc(nombreMes(p)) + '</b></div>' + MENSUALES.map(function (x) { return fila(x[0], x[1], p); }).join('');
-        }).join('') +
+        }).join('') : N.vacio('Todavía no hay declaraciones por subir', 'La primera es la de ' + esc(desde) + '.')) +
       '</div>' +
       '<div class="card"><div class="h2">Estados financieros</div>' +
         '<p class="muted" style="font-size:13px;margin-bottom:10px">Solo si abriste tu NIT en ' + esc(anio) + ' o antes.</p>' +
-        fila('eeff', 'Estados financieros gestión ' + anio, anio) +
+        (eeffYa ? fila('eeff', 'Estados financieros gestión ' + anio, anio) :
+          '<div class="fac-sem doc-fila"><span><b>Estados financieros gestión ' + esc(anio) + '</b><small class="muted" style="display:block">Te los pediremos en ' + esc(CFG.eeffDesde.slice(0, 4)) + '. Por ahora no tienes que subir nada: te avisamos para que los vayas preparando.</small></span>' +
+          '<span class="chip neutro" style="flex:none">Se pedirá en ' + esc(CFG.eeffDesde.slice(0, 4)) + '</span></div>') +
       '</div>') +
       '<input id="docArch" type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.csv" hidden>';
   };

@@ -77,7 +77,7 @@
     if (!lista) cargar();
     var pend = (S.datos || {}).pendientes || [], libres = semanasLibres(), k = infoCorte();
     var pagadas = libres.filter(function (p) { return p.pagada; }).length;
-    return N.titulo('Mis facturas', 'Sube aquí tu factura en PDF. Ya no hace falta mandarla por WhatsApp.') +
+    return N.titulo('Mis facturas', 'Sube aquí tu factura en PDF, foto o captura. Ya no hace falta mandarla por WhatsApp.') +
       '<div class="aviso info">' + ic('reloj') + '<div><b>Corte: ' + textoDia(k.corte) + ' a las 18:00</b>' +
         'Lo que subas antes entra al pago del ' + textoDia(k.viernes) + '. Lo que llegue después entra al pago de la semana siguiente.' +
         (k.horas <= 24 && k.horas >= 0 ? ' <b>Faltan ' + k.horas + ' h.</b>' : '') + '</div></div>' +
@@ -93,7 +93,7 @@
           '<div class="dato"><span>Razón social</span><div><b>' + esc(C.facturacion.razonSocial) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.razonSocial) + '">Copiar</button></div></div>' +
           '<div class="dato"><span>NIT</span><div><b class="num">' + esc(C.facturacion.nit) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.nit) + '">Copiar</button></div></div>' +
           '<ul class="reglas" style="margin-top:12px">' +
-            '<li>' + ic('doc') + '<span>Solo sube el PDF: leemos solos el número, la fecha, el NIT y el importe.</span></li>' +
+            '<li>' + ic('doc') + '<span>Sube el <b>PDF, una foto o una captura</b> de tu factura: leemos solos el número, la fecha, el NIT y el importe. En fotos y capturas <b>todos los datos deben leerse bien</b>.</span></li>' +
             '<li>' + ic('escudo') + '<span><b>Una factura por cada pago</b>, por el importe exacto de ese pago, a nombre de MILTHAGOR y emitida con tu NIT registrado' + (S.perfil ? ' (<b class="num">' + esc(S.perfil.nit) + '</b>)' : '') + '. Adjúntala con el botón de ese pago.</span></li>' +
             '<li>' + ic('info') + '<span>Si una factura queda <b>Observada</b>, lee el motivo, corrígela y súbela de nuevo.</span></li>' +
           '</ul>' +
@@ -127,8 +127,8 @@
             '<button class="btn chico" type="button" data-adjuntar="' + i + '">' + ic('doc') + 'Adjuntar factura</button></div>' + estadosPago(p) +
           '<div class="fac-leida" id="facLeida' + i + '"></div></div>';
       }).join('') +
-      '<input id="facPdf" type="file" accept="application/pdf,.pdf" hidden>' +
-      '<p class="muted" style="font-size:13px">Una factura por cada pago, por el importe exacto de ese pago. Sube el PDF del SIAT (hasta 700 KB): leemos los datos solos.</p>' +
+      '<input id="facPdf" type="file" accept="application/pdf,.pdf,image/*" hidden>' +
+      '<p class="muted" style="font-size:13px">Una factura por cada pago, por el importe exacto de ese pago. Sube el PDF del SIAT (hasta 700 KB), una foto o una captura: leemos los datos solos.</p>' +
     '</div>';
   }
   function tabla() {
@@ -156,7 +156,9 @@
   function revisar(d, pago, libres) {
     var p = S.perfil || {}, mil = C.facturacion, ch = [];
     var punto = function (ok, bien, mal) { ch.push({ ok: !!ok, t: ok ? bien : mal }); };
-    punto(d.esFactura && !d.anulada, 'Es una factura del SIAT', d.anulada ? 'La factura figura ANULADA.' : 'El archivo no parece una factura del SIAT. Sube el PDF que descargas del SIAT, no una foto ni un comprobante.');
+    punto(d.esFactura && !d.anulada, 'Es una factura del SIAT', d.anulada ? 'La factura figura ANULADA.' : 'El archivo no parece una factura del SIAT. Sube el PDF, una foto o una captura de tu factura, no un comprobante ni un recibo.');
+    punto(d.legible !== false, 'Todos los datos se leen bien',
+      'No se leen bien ' + ((d.ilegibles || []).length ? 'estos datos: ' + d.ilegibles.join(', ') : 'algunos datos') + '. Sube una foto o captura más clara (completa, derecha y sin reflejos) o el PDF del SIAT.');
     punto(digitos(d.nitComprador) === digitos(mil.nit) && /MILTHAGOR/.test(normal(d.razonSocialComprador)),
       'A nombre de ' + mil.razonSocial + ' (NIT ' + mil.nit + ')',
       'La factura debe estar a nombre de ' + mil.razonSocial + ' con NIT ' + mil.nit + '. Está a nombre de «' + (d.razonSocialComprador || '—') + '» (NIT ' + (d.nitComprador || '—') + ').');
@@ -165,7 +167,7 @@
     punto(mismoNombre(d.razonSocialEmisor, p.razonSocial) !== false, 'Emitida por ' + (d.razonSocialEmisor || '—'),
       'La factura la emite «' + (d.razonSocialEmisor || '—') + '», pero tu razón social registrada es «' + p.razonSocial + '».');
     var repetida = (lista || []).some(function (f) { return f.estado !== 'anulada' && f.estado !== 'rechazada' && digitos(f.numero) === digitos(d.numeroFactura) && (!f.nitEmisor || digitos(f.nitEmisor) === digitos(d.nitEmisor)); });
-    punto(d.numeroFactura && !repetida, 'Factura N.º ' + d.numeroFactura, d.numeroFactura ? 'Ya subiste la factura N.º ' + d.numeroFactura + '.' : 'No se encontró el número de la factura en el PDF.');
+    punto(d.numeroFactura && !repetida, 'Factura N.º ' + d.numeroFactura, d.numeroFactura ? 'Ya subiste la factura N.º ' + d.numeroFactura + '.' : 'No se encontró el número de la factura.');
     var hoy = new Date(Date.now() - 4 * 3600e3).toISOString().slice(0, 10);
     punto(d.fechaEmision && d.fechaEmision <= hoy, 'Emitida el ' + fechaCorta(d.fechaEmision), 'No se encontró la fecha de emisión o es una fecha futura.');
     var igual = Math.abs((Number(d.importeTotal) || 0) - (Number(pago.importe) || 0)) <= 0.05;
@@ -181,7 +183,7 @@
   function pintarLeida(d, rv) {
     var dato = function (t, v) { return '<div class="dato"><span>' + t + '</span><div><b>' + esc(v || '—') + '</b></div></div>'; };
     return '<div class="card" style="margin:6px 0 12px">' +
-      '<div class="h2">Datos de tu factura <small>leídos del PDF</small></div>' +
+      '<div class="h2">Datos de tu factura <small>leídos del archivo</small></div>' +
       dato('N.º de factura', d.numeroFactura) + dato('Fecha de emisión', fechaCorta(d.fechaEmision)) + dato('NIT del emisor', d.nitEmisor) + dato('Emisor', d.razonSocialEmisor) +
       dato('A nombre de', d.razonSocialComprador + (d.nitComprador ? ' · NIT ' + d.nitComprador : '')) + dato('Importe', bs(d.importeTotal)) +
       (d.codigoAutorizacion ? dato('Código de autorización', d.codigoAutorizacion.slice(0, 22) + (d.codigoAutorizacion.length > 22 ? '…' : '')) : '') +
@@ -205,7 +207,7 @@
     return N.auth().currentUser.getIdToken().then(function (tok) {
       return fetch(C.ia.url.replace(/\/+$/, '') + '/factura', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
-        body: JSON.stringify({ pdf: dataUrl.slice(dataUrl.indexOf(',') + 1) })
+        body: JSON.stringify({ pdf: dataUrl.slice(dataUrl.indexOf(',') + 1), tipo: (dataUrl.match(/^data:([^;,]+)/) || [0, 'application/pdf'])[1] })
       });
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
@@ -214,10 +216,29 @@
       });
     });
   }
-  function leerPDF(archivo) {
+  /* Fotos y capturas: se achican a JPEG (lado mayor 2000 px) para que pesen poco y la IA lea más rápido */
+  function leerImagen(archivo) {
     return new Promise(function (ok, mal) {
-      if (!archivo) return mal(new Error('Elige el PDF de tu factura.'));
-      if (!/pdf$/i.test(archivo.type || '') && !/\.pdf$/i.test(archivo.name || '')) return mal(new Error('El archivo debe ser PDF.'));
+      var url = URL.createObjectURL(archivo), img = new Image();
+      img.onload = function () {
+        var esc2 = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight)), cv = document.createElement('canvas');
+        cv.width = Math.round(img.naturalWidth * esc2); cv.height = Math.round(img.naturalHeight * esc2);
+        var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        var q = 0.85, d = cv.toDataURL('image/jpeg', q);
+        while (d.length * 0.75 > MAX_PDF && q > 0.4) { q -= 0.15; d = cv.toDataURL('image/jpeg', q); }
+        if (d.length * 0.75 > MAX_PDF) return mal(new Error('La imagen es muy grande. Sube una captura o el PDF.'));
+        ok(d);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); mal(new Error('No se pudo abrir la imagen. Sube una foto en JPG o PNG, o el PDF.')); };
+      img.src = url;
+    });
+  }
+  function leerPDF(archivo) {
+    if (archivo && /^image\//i.test(archivo.type || '')) return leerImagen(archivo);
+    return new Promise(function (ok, mal) {
+      if (!archivo) return mal(new Error('Elige el PDF, la foto o la captura de tu factura.'));
+      if (!/pdf$/i.test(archivo.type || '') && !/\.pdf$/i.test(archivo.name || '')) return mal(new Error('El archivo debe ser PDF, foto o captura (JPG o PNG).'));
       if (archivo.size > MAX_PDF) return mal(new Error('El PDF pesa ' + Math.round(archivo.size / 1024) + ' KB. El máximo es 700 KB.'));
       var r = new FileReader();
       r.onload = function () {

@@ -708,7 +708,7 @@
         '<div class="card"><div class="h2">Datos para facturar</div>' +
           '<div class="dato"><span>Razón social</span><div><b>' + esc(C.facturacion.razonSocial) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.razonSocial) + '">Copiar</button></div></div>' +
           '<div class="dato"><span>NIT</span><div><b class="num">' + esc(C.facturacion.nit) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.nit) + '">Copiar</button></div></div>' +
-          '<div style="margin-top:14px"><button class="btn ancho" data-ir="facturas">' + ic('doc') + 'Subir mi factura en PDF</button></div>' +
+          '<div style="margin-top:14px"><button class="btn ancho" data-ir="facturas">' + ic('doc') + 'Subir mi factura</button></div>' +
         '</div>' +
         '<div class="card"><div class="h2">Cuándo se paga</div><ul class="reglas">' +
           (C.reglasPago || []).map(function (t) { return '<li>' + ic('reloj') + '<span>' + esc(t) + '</span></li>'; }).join('') +
@@ -1019,7 +1019,7 @@
           '<p class="muted">Dudas sobre tus pagos, trámites, NIT, Matrícula de Comercio o ROE.</p>' +
           '<a class="btn wa" href="' + wa(C.whatsappGeneral, 'Hola CONTAX, soy ' + (S.datos.nombre || '') + ' (ID ' + (S.datos.id || '') + ').') + '" target="_blank" rel="noopener">' + ic('whatsapp') + 'Escribir por WhatsApp</a></div>' +
         '<div class="wa-card"><span class="et">Facturas</span><span class="tel">Desde el portal</span>' +
-          '<p class="muted">Las facturas se suben en PDF en <b>Mis facturas</b>. Ahí ves al instante si fue aprobada u observada.</p>' +
+          '<p class="muted">Las facturas se suben en PDF, foto o captura en <b>Mis facturas</b>. Ahí ves al instante si fue aprobada u observada.</p>' +
           '<button class="btn sec" data-ir="facturas">' + ic('doc') + 'Subir factura</button></div>' +
       '</div>' +
       '<div class="card" style="margin-top:14px"><div class="h2">Antes de escribirnos</div><ul class="reglas">' +
@@ -1250,7 +1250,7 @@
           { p: '¿Qué significa que mi pago está "Pendiente"?', r: 'Que tu pago ya está registrado y en proceso, pero todavía no fue abonado. Cuando se pague, pasa a tu Historial.' },
           { p: 'Mi pago no aparece en el portal, ¿qué hago?', r: 'Revisa en Mis facturas que tu factura esté Aprobada. Si pasaron más de 48 horas, abre un trámite de Soporte.' } ] },
         { nombre: 'Facturación', preguntas: [
-          { p: '¿Dónde envío mis facturas?', r: 'En la sección Mis facturas del portal: subes el PDF y ves su estado al instante.' },
+          { p: '¿Dónde envío mis facturas?', r: 'En la sección Mis facturas del portal: subes el PDF, una foto o una captura y ves su estado al instante.' },
           { p: 'No tengo NIT, ¿pueden ayudarme?', r: 'Sí. CONTAX te ayuda a obtener tu NIT, Matrícula de Comercio y ROE. Escríbenos al WhatsApp 69021969.' } ] }
       ],
       encuesta: { titulo: '¿Cómo te atendemos?', texto: 'Tu opinión nos ayuda a mejorar. Son 2 minutos.', textoBoton: 'Calificar el servicio', url: '#' }

@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.23',
+  version: '3.24',
 
   /* true = el portal muestra «EN MANTENIMIENTO» y nadie entra (el equipo prueba con ?probar=1 en la dirección) */
   mantenimiento: false,
@@ -48,11 +48,12 @@ window.PORTAL = {
      Se cambia a 'control' el mismo día que CONTROL (ver INTEGRACION-NUCLEO-YANGO.md). */
   fuentePagos: 'control',
   /* Mis documentos: vigencia que debe tener la Matrícula de Comercio de la gestión actual,
-     gestión de los estados financieros que se piden y cuántos meses de declaraciones se muestran */
-  documentos: { matriculaHasta: '2027-05-31', gestionEEFF: '2025', meses: 6 },
+     cuántos meses de declaraciones se muestran y desde qué mes se piden (los anteriores no),
+     gestión de los estados financieros y desde qué fecha se piden (antes solo se avisa) */
+  documentos: { matriculaHasta: '2027-05-31', meses: 6, declaracionesDesde: '2026-10', gestionEEFF: '2026', eeffDesde: '2027-01-01' },
   reglasPago: [
     'Las facturas se reciben hasta el jueves antes de las 18:00. Si llegan después y están correctas, se pagan la semana siguiente.',
     'Los pagos los realiza Milthagor S.R.L., por lo general los viernes. A veces se adelantan al jueves después de las 19:00.',
-    'Sube tu factura en PDF en «Mis facturas». Ahí ves al instante si fue aprobada u observada.'
+    'Sube tu factura en PDF, foto o captura en «Mis facturas». Ahí ves al instante si fue aprobada u observada.'
   ]
 };

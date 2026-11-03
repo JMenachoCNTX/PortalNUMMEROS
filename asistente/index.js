@@ -5,7 +5,7 @@
       (token de Firebase), así nadie de afuera gasta tu saldo.
    2) Limita la cantidad de preguntas por persona.
    3) Le pasa a DeepSeek la pregunta con los datos del repartidor.
-   4) Ruta /factura: lee con Gemini el PDF de la factura que sube el repartidor
+   4) Ruta /factura: lee con Gemini el PDF, foto o captura de la factura que sube el repartidor
       y devuelve sus datos (N.º, fecha, NIT, razón social, importe, CUF…).
    Las claves viven SOLO aquí (secretos DEEPSEEK_API_KEY y GEMINI_API_KEY).
    ══════════════════════════════════════════════════════════ */
@@ -57,8 +57,8 @@ function permitido(uid, mapa = usos, lim = LIMITE.preguntas, minutos = LIMITE.mi
 
 /* ══════════ LECTOR DE FACTURAS (Gemini) ══════════ */
 const LECTOR = `Eres un lector de facturas electrónicas del SIAT de Bolivia (Impuestos Nacionales).
-Recibes el PDF de una factura que un repartidor emitió por sus servicios. Extrae los datos exactamente como aparecen.
-- esFactura: false si el documento no es una factura (por ejemplo una foto, un recibo, un comprobante de pago o una nota).
+Recibes el PDF de una factura que un repartidor emitió por sus servicios, o una foto o captura de pantalla de esa factura. Extrae los datos exactamente como aparecen.
+- esFactura: false si el documento no es una factura del SIAT (por ejemplo un recibo, un comprobante de pago, una nota o una foto de otra cosa). Una foto o captura de una factura del SIAT SÍ es una factura.
 - nitEmisor: NIT de quien EMITE la factura (arriba, junto a su nombre). Solo dígitos.
 - razonSocialEmisor: nombre o razón social de quien emite.
 - numeroFactura: número de la factura ("FACTURA N°" / "N° FACTURA"). Solo dígitos.
@@ -68,35 +68,51 @@ Recibes el PDF de una factura que un repartidor emitió por sus servicios. Extra
 - razonSocialComprador: "Nombre/Razón Social" del cliente.
 - importeTotal: el total a pagar o "MONTO A PAGAR" / "IMPORTE BASE CRÉDITO FISCAL" si es el único total, como número (punto decimal).
 - semanas: números de semana que menciona la descripción (por ejemplo "SERVICIOS DE DELIVERY SEM 43" → ["43"]; "SEM 42 Y 43" → ["42","43"]). Vacío si no menciona ninguna.
-- anulada: true solo si el PDF dice claramente ANULADA.
-Si un dato no aparece, déjalo vacío (o 0 en importeTotal). No inventes nada.`;
+- anulada: true solo si el documento dice claramente ANULADA.
+- legible: false si algún dato de los de arriba (NIT, nombre, N.º, código de autorización, fecha, cliente o importe) está borroso, cortado, tapado o no se puede leer con seguridad.
+- ilegibles: los nombres de los datos que no se pueden leer con seguridad (por ejemplo ["importe", "fecha"]). Vacío si todo se lee bien.
+Si un dato no aparece o no se lee, déjalo vacío (o 0 en importeTotal). No adivines ni inventes nada.`;
 const ESQUEMA_FACTURA = {
   type: 'OBJECT',
   properties: {
     esFactura: { type: 'BOOLEAN' }, nitEmisor: { type: 'STRING' }, razonSocialEmisor: { type: 'STRING' }, numeroFactura: { type: 'STRING' },
     codigoAutorizacion: { type: 'STRING' }, fechaEmision: { type: 'STRING' }, nitComprador: { type: 'STRING' }, razonSocialComprador: { type: 'STRING' },
-    importeTotal: { type: 'NUMBER' }, semanas: { type: 'ARRAY', items: { type: 'STRING' } }, anulada: { type: 'BOOLEAN' }
+    importeTotal: { type: 'NUMBER' }, semanas: { type: 'ARRAY', items: { type: 'STRING' } }, anulada: { type: 'BOOLEAN' },
+    legible: { type: 'BOOLEAN' }, ilegibles: { type: 'ARRAY', items: { type: 'STRING' } }
   },
-  required: ['esFactura', 'nitEmisor', 'razonSocialEmisor', 'numeroFactura', 'fechaEmision', 'nitComprador', 'razonSocialComprador', 'importeTotal']
+  required: ['esFactura', 'nitEmisor', 'razonSocialEmisor', 'numeroFactura', 'fechaEmision', 'nitComprador', 'razonSocialComprador', 'importeTotal', 'legible']
 };
 async function leerFactura(pedido, env, cab) {
   const pdf = String(pedido.pdf || '').replace(/^data:[^,]*,/, '');
-  if (!pdf || pdf.length > 1400000) return respuesta({ error: 'El PDF es muy grande o está vacío (máximo 1 MB).' }, 400, cab);
-  // Flash-Lite primero: lee bien las facturas del SIAT y responde en segundos (Flash «piensa» y puede tardar más de un minuto)
-  const modelos = [env.MODELO_GEMINI, 'gemini-flash-lite-latest', 'gemini-flash-latest'].filter(Boolean);
-  let ultimo = '';
-  for (const m of modelos) {
-    const corte = new AbortController(), reloj = setTimeout(() => corte.abort(), 40000);
-    let r;
-    try { r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
-      method: 'POST', signal: corte.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        contents: [{ parts: [{ inline_data: { mime_type: 'application/pdf', data: pdf } }, { text: 'Extrae los datos de esta factura.' }] }],
-        systemInstruction: { parts: [{ text: LECTOR }] },
-        generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: ESQUEMA_FACTURA }
-      })
-    }); } catch (e) { ultimo = 'tiempo'; console.log('Gemini', m, 'sin respuesta en 40 s'); continue; } finally { clearTimeout(reloj); }
+  if (!pdf || pdf.length > 1400000) return respuesta({ error: 'El archivo es muy grande o está vacío (máximo 1 MB).' }, 400, cab);
+  // PDF del SIAT, o foto/captura (el portal la achica a JPEG antes de mandarla)
+  const tipo = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(pedido.tipo) ? pedido.tipo : 'application/pdf';
+  // Flash-Lite primero y sin «pensar»: lee bien las facturas del SIAT y responde en segundos.
+  // Si un modelo no contesta rápido se pasa al siguiente (antes se esperaba 40 s por modelo).
+  const modelos = [env.MODELO_GEMINI, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-flash-latest'].filter(Boolean);
+  const espera = [15000, 15000, 25000, 30000];
+  let ultimo = '', inicio = Date.now();
+  for (let i = 0; i < modelos.length; i++) {
+    const m = modelos[i];
+    let r, sinPensar = true;
+    for (let intento = 0; intento < 2; intento++) {
+      const corte = new AbortController(), reloj = setTimeout(() => corte.abort(), espera[i] || 25000);
+      const gen = { temperature: 0, responseMimeType: 'application/json', responseSchema: ESQUEMA_FACTURA };
+      if (sinPensar) gen.thinkingConfig = { thinkingBudget: 0 };
+      try { r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
+        method: 'POST', signal: corte.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ parts: [{ inline_data: { mime_type: tipo, data: pdf } }, { text: 'Extrae los datos de esta factura.' }] }],
+          systemInstruction: { parts: [{ text: LECTOR }] },
+          generationConfig: gen
+        })
+      }); } catch (e) { r = null; ultimo = 'tiempo'; console.log('Gemini', m, 'sin respuesta a tiempo'); } finally { clearTimeout(reloj); }
+      // Si el modelo no acepta apagar el «pensamiento», se repite sin esa opción
+      if (r && r.status === 400 && sinPensar) { const t = await r.text(); if (/think/i.test(t)) { sinPensar = false; continue; } ultimo = '400 ' + t.slice(0, 200); r = null; }
+      break;
+    }
+    if (!r) continue;
     if (!r.ok) { ultimo = r.status + ' ' + (await r.text()).slice(0, 200); console.log('Gemini', m, ultimo); continue; }
     const j = await r.json();
     const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(p => p.text || '').join('');
@@ -107,8 +123,9 @@ async function leerFactura(pedido, env, cab) {
       numeroFactura: dig(d.numeroFactura), codigoAutorizacion: String(d.codigoAutorizacion || '').replace(/\s+/g, '').toUpperCase().slice(0, 80),
       fechaEmision: /^\d{4}-\d{2}-\d{2}$/.test(d.fechaEmision || '') ? d.fechaEmision : '', nitComprador: dig(d.nitComprador),
       razonSocialComprador: String(d.razonSocialComprador || '').trim().slice(0, 160), importeTotal: Math.round((Number(d.importeTotal) || 0) * 100) / 100,
-      semanas: (Array.isArray(d.semanas) ? d.semanas : []).map(dig).filter(Boolean).slice(0, 12), anulada: d.anulada === true
-    }, modelo: m }, 200, cab);
+      semanas: (Array.isArray(d.semanas) ? d.semanas : []).map(dig).filter(Boolean).slice(0, 12), anulada: d.anulada === true,
+      legible: d.legible !== false, ilegibles: (Array.isArray(d.ilegibles) ? d.ilegibles : []).map(x => String(x).slice(0, 40)).slice(0, 10)
+    }, modelo: m, ms: Date.now() - inicio }, 200, cab);
   }
   return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.' }, 502, cab);
 }
