@@ -273,6 +273,8 @@
       return Object.assign({}, s, { enPlanilla: s.tipo === 'en_planilla', estado: s.tipo === 'en_planilla' ? 'Enviado a pagar' : s.fuera ? 'No entró a la planilla' : s.rebote ? 'Devuelto por el banco' : 'Pendiente' });
     });
     d.historial = d.semanas.filter(function (s) { return s.tipo === 'pagado'; });
+    // Pagadas pero con la factura pendiente de emisión (en el historial dicen «Pago Retenido»): el repartidor la emite y la sube después
+    d.porEmitir = d.historial.filter(function (s) { return /RETENID/i.test(s.factura); });
     d.ultimaSemana = d.semanas[0] || null;
     d.habilitado = !(d.ultimaSemana && d.ultimaSemana.tipo === 'no_habilitado');
     d.resumen = { pendientes: { cantidad: d.pendientes.length, total: suma(d.pendientes) }, pagados: { cantidad: d.historial.length, total: suma(d.historial) } };
@@ -289,7 +291,8 @@
   }
   function chipSemanaTipo(s) {
     var t = { pagado: ['ok', 'Pagado' + (s.fechaPago ? ' el ' + s.fechaPago : '')], en_planilla: ['pend', 'Enviado a pagar'], pendiente: [s.fuera || s.rebote ? 'mal' : 'pend', s.fuera ? 'No entró a la planilla' : s.rebote ? 'Devuelto por el banco' : 'Pendiente'], no_habilitado: ['mal', 'No habilitado'] }[s.tipo] || ['pend', s.tipo];
-    return '<span class="chip ' + t[0] + '">' + esc(t[1]) + '</span>';
+    return '<span class="chip ' + t[0] + '">' + esc(t[1]) + '</span>' +
+      (s.tipo === 'pagado' && /RETENID/i.test(s.factura) ? ' <span class="chip pend">Factura pendiente de emisión</span>' : '');
   }
 
   /* Anuncios, avisos y preguntas (se editan en CONTROL) */

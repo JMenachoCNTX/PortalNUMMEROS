@@ -76,15 +76,18 @@
   N.PAGINAS.facturas = function () {
     if (!lista) cargar();
     var pend = (S.datos || {}).pendientes || [], libres = semanasLibres(), k = infoCorte();
+    var pagadas = libres.filter(function (p) { return p.pagada; }).length;
     return N.titulo('Mis facturas', 'Sube aquí tu factura en PDF. Ya no hace falta mandarla por WhatsApp.') +
       '<div class="aviso info">' + ic('reloj') + '<div><b>Corte: ' + textoDia(k.corte) + ' a las 18:00</b>' +
         'Lo que subas antes entra al pago del ' + textoDia(k.viernes) + '. Lo que llegue después entra al pago de la semana siguiente.' +
         (k.horas <= 24 && k.horas >= 0 ? ' <b>Faltan ' + k.horas + ' h.</b>' : '') + '</div></div>' +
+      (pagadas ? '<div class="aviso alerta">' + ic('alerta') + '<div><b>Tienes ' + pagadas + (pagadas === 1 ? ' pago que ya se pagó' : ' pagos que ya se pagaron') + ' pero falta su factura</b>' +
+        'El pago está hecho, pero la factura sigue pendiente de emisión. Emítela en el SIAT y adjúntala abajo, en ese pago.</div></div>' : '') +
       '<div class="grid2">' +
         '<div class="card"><div class="h2">Subir factura</div>' +
           (!S.perfil && !N.DEMO ? '<p style="margin-bottom:12px">Para subir facturas primero registra tu NIT. Lo pedimos una sola vez.</p><button class="btn ancho" data-pedir-nit>' + ic('doc') + 'Registrar mi NIT</button>' :
             libres.length ? formulario(libres) :
-            N.vacio(pend.length ? 'Todas tus semanas pendientes ya tienen factura' : 'No tienes semanas pendientes', 'Cuando registremos una semana nueva podrás subir su factura aquí.')) +
+            N.vacio(pend.length || ((S.datos || {}).porEmitir || []).length ? 'Todos tus pagos ya tienen factura' : 'No tienes semanas pendientes', 'Cuando registremos una semana nueva podrás subir su factura aquí.')) +
         '</div>' +
         '<div class="card"><div class="h2">Datos para facturar</div>' +
           '<div class="dato"><span>Razón social</span><div><b>' + esc(C.facturacion.razonSocial) + '</b><button class="copiar" data-copiar="' + esc(C.facturacion.razonSocial) + '">Copiar</button></div></div>' +
@@ -103,8 +106,16 @@
 
   /* Semanas que todavía se pueden facturar («Enviado a pagar» ya está en la planilla del banco) */
   function semanasLibres() {
-    var ya = semanasConFactura();
-    return ((S.datos || {}).pendientes || []).filter(function (p) { return !ya[p.semana] && !p.enPlanilla; });
+    var ya = semanasConFactura(), d = S.datos || {};
+    var pend = (d.pendientes || []).filter(function (p) { return !ya[p.semana] && !p.enPlanilla; });
+    // También los pagos ya pagados cuya factura está pendiente de emisión
+    var pagadas = (d.porEmitir || []).filter(function (p) { return !ya[p.semana]; }).map(function (p) { return Object.assign({}, p, { pagada: true }); });
+    return pend.concat(pagadas);
+  }
+  /* Dos estados distintos: el del pago y el de la factura */
+  function estadosPago(p) {
+    return '<div class="fac-estados"><span class="muted">Pago:</span> ' + (p.pagada ? '<span class="chip ok">Pagado' + (p.fechaPago ? ' el ' + esc(p.fechaPago) : '') + '</span>' : '<span class="chip pend">Pendiente</span>') +
+      ' <span class="muted">Factura:</span> <span class="chip pend">Pendiente de emisión</span></div>';
   }
   /* Un pago = una factura. Cada pago pendiente tiene su botón «Adjuntar factura»; la factura se revisa
      contra ESE pago (mismo importe exacto). Así cada pago del banco tiene su factura y la conciliación es directa. */
@@ -113,7 +124,7 @@
       libres.map(function (p, i) {
         return '<div class="fac-pago" data-i="' + i + '">' +
           '<div class="fac-sem"><span><b class="num">' + esc(p.semana) + '</b> · ' + esc(p.rango || '') + '</span><em class="num">' + bs(p.importe) + '</em>' +
-            '<button class="btn chico" type="button" data-adjuntar="' + i + '">' + ic('doc') + 'Adjuntar factura</button></div>' +
+            '<button class="btn chico" type="button" data-adjuntar="' + i + '">' + ic('doc') + 'Adjuntar factura</button></div>' + estadosPago(p) +
           '<div class="fac-leida" id="facLeida' + i + '"></div></div>';
       }).join('') +
       '<input id="facPdf" type="file" accept="application/pdf,.pdf" hidden>' +
