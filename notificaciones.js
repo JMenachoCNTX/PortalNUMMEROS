@@ -175,7 +175,13 @@
     else if (e === 'sin-soporte') cuerpo = '<div class="aviso alerta">' + ic('info') + '<div><b>Este navegador no permite notificaciones</b>Abre el portal en <b>Chrome</b> (Android) o instálalo en la pantalla de inicio (iPhone).</div></div>';
     else cuerpo = '<p style="margin-bottom:14px">Solo tienes que permitirlas una vez en este celular.</p><button class="btn" data-notif="activar">' + ic('campana') + 'Activar avisos</button>' +
       (d.ios ? '' : '<p class="muted" style="margin-top:10px;font-size:13px">En iPhone: funcionan solo si el portal está instalado en la pantalla de inicio.</p>');
-    return cab + '<div class="grid2"><div class="card"><div class="h2">Este celular</div>' + cuerpo + '</div>' + que + '</div>';
+    // Avisos por Telegram: el repartidor abre el bot de CONTAX una vez (con su usuario de Telegram registrado en Yango)
+    var bot = String(N.C.telegramBot || '').replace(/^@/, '');
+    var tgCard = bot ? '<div class="card"><div class="h2">Avisos por Telegram</div>' +
+      '<p style="margin-bottom:12px">También te avisamos por <b>Telegram</b> cuando esté tu pago semanal. Ábrelo una vez y toca <b>Iniciar</b>.</p>' +
+      '<a class="btn" href="https://t.me/' + esc(bot) + '?start=portal" target="_blank" rel="noopener">' + ic('campana') + 'Abrir el bot de CONTAX</a>' +
+      '<p class="muted" style="margin-top:10px;font-size:13px">Tu cuenta de Telegram debe tener nombre de usuario, el mismo que registraste en Yango.</p></div>' : '';
+    return cab + '<div class="grid2"><div class="card"><div class="h2">Este celular</div>' + cuerpo + '</div>' + que + '</div>' + tgCard;
   };
 
   document.addEventListener('click', function (ev) {

@@ -335,6 +335,7 @@ async function notificar(repartidores) {
   todos.forEach(d => { if ((d.data().tokens || [])[0]) suscritos.set(d.id, d.data().tokens[0]); });
   for (const doc of cola.docs) {
     const n = doc.data();
+    if (n.canal === 'telegram') continue;   // esos los manda telegram() con el bot
     const lista = [];
     for (const [uid, token] of suscritos) {
       const r = repartidores.get(uid);
@@ -343,6 +344,68 @@ async function notificar(repartidores) {
     const r = await enviar(lista);
     await doc.ref.update({ estado: 'enviado', enviados: r.ok, fallidos: r.mal, procesado: FieldValue.serverTimestamp() });
     console.log('::notice::Notificación del administrador "' + n.titulo + '": enviada a ' + r.ok + ' celulares.');
+  }
+}
+
+/* ══════════ TELEGRAM (bot de CONTAX) ══════════
+   Secreto de GitHub TELEGRAM_BOT_TOKEN (lo da @BotFather). Telegram no deja que un bot escriba
+   primero: el repartidor abre el bot y aprieta «Iniciar» una vez. Aquí se guarda su chat por su
+   nombre de usuario (telegramChats/{usuario}), el mismo que figura en BDYango. CONTROL deja en
+   colaNotif un aviso con canal 'telegram' y `mensajes` (JSON [{u: usuario, t: texto}]). */
+const TG = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+async function tg(metodo, datos) {
+  const r = await fetch('https://api.telegram.org/bot' + TG + '/' + metodo, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos || {}) });
+  return r.json().catch(() => ({ ok: false, description: 'Respuesta no válida' }));
+}
+async function telegram() {
+  const cola = (await db.collection('colaNotif').where('estado', '==', 'pendiente').get()).docs.filter(d => d.data().canal === 'telegram');
+  if (!TG) {
+    for (const d of cola) await d.ref.update({ estado: 'error', motivo: 'Falta el bot de Telegram (secreto TELEGRAM_BOT_TOKEN).', procesado: FieldValue.serverTimestamp() });
+    return;
+  }
+  // a) Quienes abrieron el bot desde la última vuelta
+  const refEst = db.collection('privado').doc('telegram');
+  const est = (await refEst.get()).data() || {};
+  const up = await tg('getUpdates', { offset: est.offset || 0, timeout: 0, allowed_updates: ['message'] });
+  if (!up.ok) throw new Error('Telegram: ' + (up.description || 'no respondió'));
+  let offset = est.offset || 0, nuevos = 0;
+  for (const u of up.result || []) {
+    offset = u.update_id + 1;
+    const m = u.message;
+    if (!m || !m.chat || m.chat.type !== 'private' || !m.from) continue;
+    const usuario = String(m.from.username || '').toLowerCase();
+    if (!usuario) {
+      await tg('sendMessage', { chat_id: m.chat.id, text: 'Hola. Para recibir tus avisos de pago necesitas un nombre de usuario en Telegram (Ajustes → Nombre de usuario), el mismo que registraste en Yango. Cuando lo tengas, vuelve a escribir /start.' });
+      continue;
+    }
+    const ref = db.collection('telegramChats').doc(usuario), ya = (await ref.get()).exists;
+    await ref.set({ chatId: m.chat.id, nombre: [m.from.first_name, m.from.last_name].filter(Boolean).join(' ').slice(0, 120), fecha: FieldValue.serverTimestamp() }, { merge: true });
+    if (!ya) { nuevos++; await tg('sendMessage', { chat_id: m.chat.id, text: '¡Listo! Desde ahora CONTAX te avisará por aquí cuando esté tu pago semanal de Yango. El detalle siempre está en el Portal CONTAX: https://portalnummeros.contaxbolivia.com' }); }
+  }
+  await refEst.set({ offset, actualizado: FieldValue.serverTimestamp() }, { merge: true });
+  if (nuevos) log('Telegram: ' + nuevos + ' repartidores nuevos abrieron el bot.');
+
+  // b) Avisos que mandó CONTROL
+  for (const doc of cola) {
+    let lista = []; try { lista = JSON.parse(doc.data().mensajes || '[]'); } catch (e) { lista = []; }
+    const usuarios = [...new Set(lista.map(x => String(x.u || '').replace(/^@/, '').toLowerCase()).filter(Boolean))];
+    const chats = new Map();
+    for (let i = 0; i < usuarios.length; i += 300) {
+      const docs = await db.getAll(...usuarios.slice(i, i + 300).map(u => db.collection('telegramChats').doc(u)));
+      docs.forEach(d => { if (d.exists) chats.set(d.id, d.data().chatId); });
+    }
+    let ok = 0, mal = 0, sin = 0;
+    for (const x of lista) {
+      const chat = chats.get(String(x.u || '').replace(/^@/, '').toLowerCase());
+      if (!chat) { sin++; continue; }
+      let r = await tg('sendMessage', { chat_id: chat, text: String(x.t || '').slice(0, 1000), disable_web_page_preview: true });
+      if (!r.ok && r.parameters && r.parameters.retry_after) { await esperar((r.parameters.retry_after + 1) * 1000); r = await tg('sendMessage', { chat_id: chat, text: String(x.t || '').slice(0, 1000), disable_web_page_preview: true }); }
+      if (r.ok) ok++; else mal++;
+      await esperar(50);   // Telegram permite ~30 mensajes por segundo
+    }
+    await doc.ref.update({ estado: 'enviado', enviados: ok, fallidos: mal, sinTelegram: sin, procesado: FieldValue.serverTimestamp() });
+    console.log('::notice::Telegram "' + (doc.data().titulo || '') + '": enviados ' + ok + ' · sin abrir el bot ' + sin + (mal ? ' · fallidos ' + mal : ''));
   }
 }
 
@@ -390,6 +453,7 @@ async function principal() {
   log('Repartidores actualizados: ' + escritos + (borrados ? ' · quitados: ' + borrados : ''));
 
   try { await notificar(repartidores); } catch (e) { console.log('::warning::Notificaciones: ' + e.message); }
+  try { await telegram(); } catch (e) { console.log('::warning::Telegram: ' + e.message); }
 
   estado.total = repartidores.size;
   estado.ultima = new Date().toISOString();

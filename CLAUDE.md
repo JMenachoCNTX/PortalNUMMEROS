@@ -31,7 +31,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Asistente:** `asistente.yml` lo publica en Cloudflare al cambiar `asistente/`. Secretos: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
-- Versiones: `version` en `config.js` (hoy 3.22) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.23) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -44,6 +44,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - La cuenta de administrador vieja (`admin@portalnummeros.app`, la crea el robot con `ADMIN_CLAVE`) ya no entra al portal: se cierra su sesión sin ningún mensaje (los repartidores no deben ver nada de la administración). El usuario de prueba `1234` sigue funcionando como repartidor de prueba.
 - **«Mis facturas»: solo se sube el PDF.** El asistente (`asistente/`, ruta `/factura`) lo lee con **Gemini** (secreto de GitHub `GEMINI_API_KEY`, la misma clave del Panel) y el portal revisa: factura válida, a nombre de MILTHAGOR (NIT 550276028), emitida con el NIT y la razón social registrados, N.º no repetido, fecha válida y **una factura por cada pago**: cada pago pendiente tiene su botón «Adjuntar factura» y el importe debe ser exactamente el de ese pago (no se aceptan facturas por varias semanas). Si algo falla, no se sube y se explica el motivo.
 - **Pagadas con factura pendiente de emisión (v3.22):** las semanas del historial cuya factura dice «Pago Retenido» aparecen en «Mis facturas» con «Pago: Pagado» y «Factura: Pendiente de emisión», y se adjunta su factura igual que un pago pendiente. CONTROL las ve en su Lista de facturación como «Pagados con retención».
+- **Telegram (v3.23):** bot de CONTAX (`config.js → telegramBot`, secreto de GitHub `TELEGRAM_BOT_TOKEN`). El robot (`telegram()` en `sync/sincronizar.mjs`) lee quién abrió el bot (`getUpdates`, offset en `privado/telegram`) y guarda su chat en `telegramChats/{usuario de Telegram}`; manda los avisos de `colaNotif` con `canal: 'telegram'` (`mensajes` JSON [{u, t}], los deja CONTROL → DBYango → «Avisar semana»). Telegram no deja que un bot escriba primero: solo llega a quien abrió el bot.
 - **NIT una sola vez:** al entrar se pide NIT y razón social (colección `perfiles`). Después solo el equipo lo cambia desde CONTROL.
 - **Sin `GEMINI_API_KEY` no se pueden subir facturas**: no publicar cambios del lector sin la clave cargada.
 - **Mis documentos** (`documentos.js`): NIT, Matrícula de Comercio (con vigencia; `config.js → documentos.matriculaHasta`), ROE, RCV/F-200/F-400 de los últimos meses y estados financieros (`documentos.gestionEEFF`). Colecciones `documentos` (estado) y `documentosArchivo` (archivo, máx. 700 KB). Se revisan en CONTROL → Documentos.

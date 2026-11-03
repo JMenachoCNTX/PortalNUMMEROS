@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.22',
+  version: '3.23',
 
   /* true = el portal muestra «EN MANTENIMIENTO» y nadie entra (el equipo prueba con ?probar=1 en la dirección) */
   mantenimiento: false,
@@ -25,6 +25,9 @@ window.PORTAL = {
      IMPORTANTE: debe ser igual a sync/config.mjs. No lo cambies después
      de la primera sincronización. */
   dominioUsuarios: 'repartidores.portalnummeros.app',
+
+  /* Bot de Telegram de CONTAX (usuario sin @, p. ej. 'ContaxAvisosBot'). Vacío = no se muestra en Notificaciones. */
+  telegramBot: '',
 
   /* Asistente con IA (DeepSeek a través de Cloudflare). Vacío = apagado. */
   ia: { url: 'https://portal-nummeros-ia.jhonnymenacho04.workers.dev' },
