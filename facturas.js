@@ -16,6 +16,16 @@
   var S = N.S, C = N.C, esc = N.esc, ic = N.ic, bs = N.bs;
   var MAX_PDF = 700 * 1024;   // 700 KB (Firebase guarda hasta ~1 MB por documento)
   var lista = null, cargando = false, escucha = null;
+  var emision = {};   // semana → motivo de CONTAX (colección emisionContax, la escribe el Panel)
+  var AYUDA_MOTIVO = {
+    'PEDIR CÓDIGO DE INGRESO': 'Envíanos el código de ingreso que te llega de Impuestos Nacionales.',
+    'PEDIR CÓDIGO SIAT': 'Envíanos el código del SIAT que te llega de Impuestos Nacionales.',
+    'FALTA DDJJ': 'Tienes una declaración jurada pendiente: hay que presentarla antes de facturar.',
+    'NIT INACTIVO': 'Tu NIT figura inactivo en Impuestos Nacionales: hay que reactivarlo.',
+    'CONTRASEÑA INCORRECTA PORTAL': 'La contraseña de Impuestos que tenemos no funciona: envíanos la correcta.',
+    'SIN ACTIVIDADES ECONÓMICAS': 'Tu NIT no tiene una actividad económica registrada: hay que agregarla.',
+    'CONTRASEÑA INCORRECTA SIAT': 'La contraseña del SIAT que tenemos no funciona: envíanos la correcta.'
+  };
 
   var ESTADOS = {
     recibida: ['pend', 'Recibida · en revisión'],
@@ -65,6 +75,11 @@
       cargando = false;
       if (S.pagina === 'facturas') N.ir('facturas', true);
     }, function (e) { console.error(e); cargando = false; lista = []; if (S.pagina === 'facturas') N.ir('facturas', true); });
+    N.db().collection('emisionContax').where('uid', '==', N.auth().currentUser.uid).onSnapshot(function (q) {
+      emision = {};
+      q.forEach(function (d) { var x = d.data(); if (x.estado === 'noSePudo') emision[x.semana] = x; });
+      if (S.pagina === 'facturas') N.ir('facturas', true);
+    }, function (e) { console.warn('emisionContax', e); });
   }
   function semanasConFactura() {
     var s = {};
@@ -81,6 +96,8 @@
       '<div class="aviso info">' + ic('reloj') + '<div><b>Corte: ' + textoDia(k.corte) + ' a las 18:00</b>' +
         'Lo que subas antes entra al pago del ' + textoDia(k.viernes) + '. Lo que llegue después entra al pago de la semana siguiente.' +
         (k.horas <= 24 && k.horas >= 0 ? ' <b>Faltan ' + k.horas + ' h.</b>' : '') + '</div></div>' +
+      (libres.some(function (p) { return emision[p.semana]; }) ? '<div class="aviso alerta">' + ic('alerta') + '<div><b>CONTAX no pudo emitir tu factura</b>' +
+        'Mira el motivo en el pago y escríbenos para resolverlo. Apenas lo tengamos, emitimos tu factura.</div></div>' : '') +
       (pagadas ? '<div class="aviso alerta">' + ic('alerta') + '<div><b>Tienes ' + pagadas + (pagadas === 1 ? ' pago que ya se pagó' : ' pagos que ya se pagaron') + ' pero falta su factura</b>' +
         'El pago está hecho, pero la factura sigue pendiente de emisión. Emítela en el SIAT y adjúntala abajo, en ese pago.</div></div>' : '') +
       '<div class="grid2">' +
@@ -114,8 +131,10 @@
   }
   /* Dos estados distintos: el del pago y el de la factura */
   function estadosPago(p) {
+    var e = emision[p.semana];
     return '<div class="fac-estados"><span class="muted">Pago:</span> ' + (p.pagada ? '<span class="chip ok">Pagado' + (p.fechaPago ? ' el ' + esc(p.fechaPago) : '') + '</span>' : '<span class="chip pend">Pendiente</span>') +
-      ' <span class="muted">Factura:</span> <span class="chip pend">Pendiente de emisión</span></div>';
+      ' <span class="muted">Factura:</span> ' + (e ? '<span class="chip mal">CONTAX no pudo emitirla</span>' : '<span class="chip pend">Pendiente de emisión</span>') + '</div>' +
+      (e ? '<div class="fac-motivo"><b>' + esc(e.motivo) + '</b>' + (AYUDA_MOTIVO[e.motivo] ? ' · ' + esc(AYUDA_MOTIVO[e.motivo]) : '') + (e.comentario ? '<br>' + esc(e.comentario) : '') + '</div>' : '');
   }
   /* Un pago = una factura. Cada pago pendiente tiene su botón «Adjuntar factura»; la factura se revisa
      contra ESE pago (mismo importe exacto). Así cada pago del banco tiene su factura y la conciliación es directa. */

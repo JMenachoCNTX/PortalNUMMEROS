@@ -3,7 +3,7 @@
    Lo único que normalmente se cambia a mano está aquí.
    ══════════════════════════════════════════════════════════ */
 window.PORTAL = {
-  version: '3.25',
+  version: '3.26',
 
   /* true = el portal muestra «EN MANTENIMIENTO» y nadie entra (el equipo prueba con ?probar=1 en la dirección) */
   mantenimiento: false,

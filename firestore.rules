@@ -139,6 +139,12 @@ service cloud.firestore {
       allow write: if puedeEditar();
     }
 
+    // Motivo por el que CONTAX no pudo emitir la factura de una semana (lo escribe el Panel). El repartidor ve solo los suyos.
+    match /emisionContax/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow write: if puedeEditar();
+    }
+
     // Historial de pagos de CONTROL (reemplaza la hoja HistPagosMTG): un documento por fecha de pago.
     // Solo el equipo; el repartidor ve sus pagos en «semanas».
     match /historialPagos/{id} {
