@@ -99,7 +99,7 @@ async function leerFactura(pedido, env, cab) {
     for (let intento = 0; intento < 2; intento++) {
       const corte = new AbortController(), reloj = setTimeout(() => corte.abort(), espera[i] || 25000);
       const gen = { temperature: 0, responseMimeType: 'application/json', responseSchema: ESQUEMA_FACTURA };
-      if (sinPensar) gen.thinkingConfig = { thinkingBudget: 0 };
+      if (sinPensar) gen.thinkingConfig = /gemini-3|latest/.test(m) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
       try { r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', {
         method: 'POST', signal: corte.signal,
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
