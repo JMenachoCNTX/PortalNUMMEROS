@@ -127,7 +127,8 @@ async function leerFactura(pedido, env, cab) {
       legible: d.legible !== false, ilegibles: (Array.isArray(d.ilegibles) ? d.ilegibles : []).map(x => String(x).slice(0, 40)).slice(0, 10)
     }, modelo: m, ms: Date.now() - inicio }, 200, cab);
   }
-  return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.' }, 502, cab);
+  // «detalle»: el último error de Gemini (el portal no lo muestra; sirve para revisar fallas)
+  return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.', detalle: ultimo.slice(0, 300) }, 502, cab);
 }
 
 const INSTRUCCIONES = `Eres el asistente del Portal CONTAX, el portal donde los repartidores de Yango en Bolivia consultan sus pagos, facturas y trámites. CONTAX es una consultora contable; el portal lo desarrolló NUMMEROS by CONTAX.
