@@ -91,7 +91,7 @@ async function leerFactura(pedido, env, cab) {
   // Si un modelo no contesta rápido se pasa al siguiente (antes se esperaba 40 s por modelo).
   const modelos = [env.MODELO_GEMINI, 'gemini-flash-lite-latest', 'gemini-2.5-flash-lite', 'gemini-flash-latest'].filter(Boolean);
   const espera = [15000, 15000, 25000, 30000];
-  let ultimo = '', inicio = Date.now();
+  let ultimo = '', inicio = Date.now(); const errores = [];
   for (let i = 0; i < modelos.length; i++) {
     const m = modelos[i];
     let r, sinPensar = true;
@@ -113,7 +113,7 @@ async function leerFactura(pedido, env, cab) {
       break;
     }
     if (!r) continue;
-    if (!r.ok) { ultimo = r.status + ' ' + (await r.text()).slice(0, 200); console.log('Gemini', m, ultimo); continue; }
+    if (!r.ok) { const tx = await r.text(); ultimo = r.status + ' ' + tx.slice(0, 200); errores.push(m + ' → ' + r.status + ' ' + ((tx.match(/"message":\s*"([^"]{0,400})/) || [])[1] || tx.slice(0, 200))); console.log('Gemini', m, ultimo); continue; }
     const j = await r.json();
     const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(p => p.text || '').join('');
     let d; try { d = JSON.parse(t || '{}'); } catch (e) { ultimo = 'json'; continue; }
@@ -128,7 +128,7 @@ async function leerFactura(pedido, env, cab) {
     }, modelo: m, ms: Date.now() - inicio }, 200, cab);
   }
   // «detalle»: el último error de Gemini (el portal no lo muestra; sirve para revisar fallas)
-  return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.', detalle: ultimo.slice(0, 300) }, 502, cab);
+  return respuesta({ error: 'No pudimos leer tu factura en este momento. Intenta de nuevo en unos minutos.', detalle: (errores.length ? errores.join(' | ') : ultimo).slice(0, 1500) }, 502, cab);
 }
 
 const INSTRUCCIONES = `Eres el asistente del Portal CONTAX, el portal donde los repartidores de Yango en Bolivia consultan sus pagos, facturas y trámites. CONTAX es una consultora contable; el portal lo desarrolló NUMMEROS by CONTAX.
