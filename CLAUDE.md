@@ -31,7 +31,8 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Asistente:** `asistente.yml` lo publica en Cloudflare al cambiar `asistente/`. Secretos: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DEEPSEEK_API_KEY`.
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
-- Versiones: `version` en `config.js` (hoy 3.26) y "(v3.x)" en el mensaje del commit.
+- Aviso de nueva versión: `version-aviso.js` (copia del de `NUMMEROS_CRM`) muestra «Hay una nueva versión · Actualizar ahora» al publicar; no hay que tocar nada.
+- Versiones: `version` en `config.js` (hoy 3.27) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
