@@ -36,6 +36,8 @@
   };
   function chip(f) {
     if (f.origen === 'contax') return '<span class="chip ok">Emitida por CONTAX</span>';
+    // Aprobada sin verificar en el Excel de Impuestos: todavía no habilita el pago
+    if (f.estado === 'aprobada' && !f.verificacion) return '<span class="chip pend">Pre-aprobada</span>';
     var e = ESTADOS[f.estado] || ['neutro', f.estado || '—'];
     return '<span class="chip ' + e[0] + '">' + e[1] + '</span>';
   }

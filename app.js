@@ -1248,7 +1248,7 @@
       preguntas: [
         { nombre: 'Pagos', preguntas: [
           { p: '¿Qué significa que mi pago está "Pendiente"?', r: 'Que tu pago ya está registrado y en proceso, pero todavía no fue abonado. Cuando se pague, pasa a tu Historial.' },
-          { p: 'Mi pago no aparece en el portal, ¿qué hago?', r: 'Revisa en Mis facturas que tu factura esté Aprobada. Si pasaron más de 48 horas, abre un trámite de Soporte.' } ] },
+          { p: 'Mi pago no aparece en el portal, ¿qué hago?', r: 'Revisa en Mis facturas que tu factura esté Aprobada (Pre-aprobada significa que todavía se está verificando en Impuestos Nacionales). Si pasaron más de 48 horas, abre un trámite de Soporte.' } ] },
         { nombre: 'Facturación', preguntas: [
           { p: '¿Dónde envío mis facturas?', r: 'En la sección Mis facturas del portal: subes el PDF, una foto o una captura y ves su estado al instante.' },
           { p: 'No tengo NIT, ¿pueden ayudarme?', r: 'Sí. CONTAX te ayuda a obtener tu NIT, Matrícula de Comercio y ROE. Escríbenos al WhatsApp 69021969.' } ] }
