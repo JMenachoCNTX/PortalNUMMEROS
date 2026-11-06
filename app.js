@@ -249,6 +249,8 @@
      Estados: pendiente · en_planilla («Enviado a pagar») · pagado · no_habilitado (importe 0) */
   function aplicarSemanas(d, q, hr) {
     var l = []; q.forEach(function (x) { l.push(x.data()); });
+    // «repartidores» lo escribe el robot y a veces llega sin nombre: se usa el de sus semanas o su razón social
+    if (!String(d.nombre || '').trim()) { var conNombre = l.filter(function (s) { return s.nombre; })[0]; d.nombre = conNombre ? conNombre.nombre : ((S.perfil && S.perfil.razonSocial) || ''); }
     // Pagos anteriores (HistPagosMTG): [semana, rango, importe, fechaPago ISO, nroFactura]; no se repiten los que ya están en «semanas»
     var filas = []; try { filas = hr ? JSON.parse(hr.filas || '[]') : []; } catch (e) { filas = []; }
     var ordenDe = function (t) {
