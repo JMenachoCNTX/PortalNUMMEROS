@@ -64,6 +64,7 @@ Recibes el PDF de una factura que un repartidor emitió por sus servicios, o una
 - numeroFactura: número de la factura ("FACTURA N°" / "N° FACTURA"). Solo dígitos.
 - codigoAutorizacion: el CUF ("CÓD. AUTORIZACIÓN" o "CUF"). Suele venir partido en varias líneas: únelas sin espacios, en mayúsculas.
 - fechaEmision: fecha de emisión ("Fecha:", puede traer hora) en formato AAAA-MM-DD.
+- horaEmision: hora de emisión que trae esa misma "Fecha:" en formato 24 h HH:MM (01:05 PM → 13:05). Vacío si no tiene hora.
 - nitComprador: NIT/CI/CEX del cliente ("NIT/CI/CEX" del comprador). Solo dígitos.
 - razonSocialComprador: "Nombre/Razón Social" del cliente.
 - importeTotal: el total a pagar o "MONTO A PAGAR" / "IMPORTE BASE CRÉDITO FISCAL" si es el único total, como número (punto decimal).
@@ -76,7 +77,7 @@ const ESQUEMA_FACTURA = {
   type: 'OBJECT',
   properties: {
     esFactura: { type: 'BOOLEAN' }, nitEmisor: { type: 'STRING' }, razonSocialEmisor: { type: 'STRING' }, numeroFactura: { type: 'STRING' },
-    codigoAutorizacion: { type: 'STRING' }, fechaEmision: { type: 'STRING' }, nitComprador: { type: 'STRING' }, razonSocialComprador: { type: 'STRING' },
+    codigoAutorizacion: { type: 'STRING' }, fechaEmision: { type: 'STRING' }, horaEmision: { type: 'STRING' }, nitComprador: { type: 'STRING' }, razonSocialComprador: { type: 'STRING' },
     importeTotal: { type: 'NUMBER' }, semanas: { type: 'ARRAY', items: { type: 'STRING' } }, anulada: { type: 'BOOLEAN' },
     legible: { type: 'BOOLEAN' }, ilegibles: { type: 'ARRAY', items: { type: 'STRING' } }
   },
@@ -123,7 +124,8 @@ async function leerFactura(pedido, env, cab) {
     return respuesta({ datos: {
       esFactura: d.esFactura !== false, nitEmisor: dig(d.nitEmisor), razonSocialEmisor: String(d.razonSocialEmisor || '').trim().slice(0, 160),
       numeroFactura: dig(d.numeroFactura), codigoAutorizacion: String(d.codigoAutorizacion || '').replace(/\s+/g, '').toUpperCase().slice(0, 80),
-      fechaEmision: /^\d{4}-\d{2}-\d{2}$/.test(d.fechaEmision || '') ? d.fechaEmision : '', nitComprador: dig(d.nitComprador),
+      fechaEmision: /^\d{4}-\d{2}-\d{2}$/.test(d.fechaEmision || '') ? d.fechaEmision : '',
+      horaEmision: /^([01]\d|2[0-3]):[0-5]\d$/.test(d.horaEmision || '') ? d.horaEmision : '', nitComprador: dig(d.nitComprador),
       razonSocialComprador: String(d.razonSocialComprador || '').trim().slice(0, 160), importeTotal: Math.round((Number(d.importeTotal) || 0) * 100) / 100,
       semanas: (Array.isArray(d.semanas) ? d.semanas : []).map(dig).filter(Boolean).slice(0, 12), anulada: d.anulada === true,
       legible: d.legible !== false, ilegibles: (Array.isArray(d.ilegibles) ? d.ilegibles : []).map(x => String(x).slice(0, 40)).slice(0, 10)

@@ -32,7 +32,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
 - Aviso de nueva versión: `version-aviso.js` (copia del de `NUMMEROS_CRM`) muestra «Hay una nueva versión · Actualizar ahora» al publicar; no hay que tocar nada.
-- Versiones: `version` en `config.js` (hoy 3.30) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.31) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -54,3 +54,5 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Pagos desde CONTROL (desde 31/10/2026):** `fuentePagos: 'control'`. Pendientes y semanas nuevas en `semanas`; el historial anterior (HistPagosMTG migrado) en `historialRider/{uid}` (`filas` JSON: semana, rango, importe, fecha de pago, N.º factura). No se repiten semanas que ya estén pagadas en `semanas`.
 - **NIT cargado por CONTAX (v3.25):** CONTROL puede crear el perfil con el NIT de las facturas anteriores (`perfiles.origen = 'historial'`); así el portal no lo pide. En esos perfiles no se exige que la razón social de la factura coincida (el NIT sí).
 - **Motivo de CONTAX (v3.26):** colección `emisionContax` (la escribe el Panel → Facturación, `{id}_{semana}`). Si `estado: 'noSePudo'`, en «Mis facturas» ese pago dice «CONTAX no pudo emitirla» con el motivo, una ayuda (`AYUDA_MOTIVO`) y el comentario, y arriba sale un aviso. Reglas: el repartidor lee solo los suyos; escribe `puedeEditar`.
+
+- **3.31:** el lector (`asistente/`, `/factura`) también devuelve `horaEmision` (HH:MM, 24 h) y la factura la guarda. CONTROL 2.4.43 la usa: si se emitió antes del corte, no queda «Después del corte» aunque se suba tarde.
