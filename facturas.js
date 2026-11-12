@@ -317,7 +317,7 @@
       lote.set(ref, {
         uid: uid, id: String(S.datos.id || ''), nombre: String(S.datos.nombre || d.razonSocialEmisor || '').slice(0, 120),
         semanas: [leida.pago.semana], numero: d.numeroFactura, importe: Math.round(d.importeTotal * 100) / 100,
-        fechaEmision: d.fechaEmision, horaEmision: d.horaEmision || '', nitEmisor: d.nitEmisor, razonEmisor: String(d.razonSocialEmisor || '').slice(0, 160),
+        fechaEmision: d.fechaEmision, nitEmisor: d.nitEmisor, razonEmisor: String(d.razonSocialEmisor || '').slice(0, 160),
         autorizacion: String(d.codigoAutorizacion || '').slice(0, 80), leidaIA: String(leida.modelo || '').slice(0, 60),
         nombreArchivo: String(a.name || 'factura.pdf').slice(0, 120), tamano: a.size,
         estado: 'recibida', subido: firebase.firestore.FieldValue.serverTimestamp(),
