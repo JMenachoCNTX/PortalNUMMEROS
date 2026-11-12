@@ -1,0 +1,176 @@
+rules_version = '2';
+// Reglas de seguridad del Portal CONTAX.
+// - Cada repartidor solo puede leer SUS datos.
+// - El administrador (cuenta con el permiso "admin") puede leer todo y editar
+//   anuncios, avisos y preguntas (publico/contenido) y subir imágenes.
+// - Los datos de pagos los escribe solo la sincronización (servidor).
+// - El equipo de CONTROL (usuarios del Panel NUMMEROS) administra todo desde el panel CONTROL.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function conSesion() { return request.auth != null; }
+    // Equipo de CONTROL: entra con su usuario del Panel NUMMEROS. El Panel pone el permiso en
+    // la cuenta (nm = es del equipo, rol = admin | operador | lectura); el navegador no lo puede cambiar.
+    function equipoNm() { return conSesion() && request.auth.token.get('nm', false) == true; }
+    function rolEq() { return request.auth.token.get('rol', ''); }
+    function esEquipo() { return equipoNm() && rolEq() in ['admin', 'operador', 'lectura']; }
+    function puedeEditar() { return equipoNm() && rolEq() in ['admin', 'operador']; }
+    // "admin" = la cuenta de administrador vieja del portal o alguien del equipo de CONTROL
+    function esAdmin() { return (conSesion() && request.auth.token.get('admin', false) == true) || esEquipo(); }
+    function esRepartidor(uid) { return conSesion() && request.auth.uid == uid; }
+
+    match /repartidores/{uid} {
+      allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
+      allow write: if false;
+
+      match /lecturas/{codigo} {
+        allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
+        allow create, update: if conSesion() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['fecha', 'titulo', 'codigo', 'id', 'nombre'])
+          && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 200
+          && (!('nombre' in request.resource.data) || request.resource.data.nombre.size() <= 120);
+      }
+    }
+
+    // Para que el administrador cuente quién leyó cada aviso
+    match /{ruta=**}/lecturas/{codigo} {
+      allow read: if esAdmin();
+    }
+
+    match /publico/{doc} {
+      allow read: if conSesion();
+      allow write: if ((conSesion() && request.auth.token.get('admin', false) == true) || puedeEditar()) && doc == 'contenido';
+    }
+
+    // Facturas que sube cada repartidor desde el portal.
+    // facturas/{id}: los datos  ·  facturasPdf/{id}: el PDF (pesado, se abre solo cuando hace falta)
+    match /facturas/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      // El equipo también puede registrarla (por ejemplo, facturas emitidas por CONTAX)
+      allow create: if puedeEditar() || (conSesion() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.estado == 'recibida'
+        && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'semanas', 'numero', 'importe', 'fechaEmision', 'nitEmisor',
+             'razonEmisor', 'autorizacion', 'leidaIA',
+             'nombreArchivo', 'tamano', 'paginas', 'estado', 'subido', 'fueraDeCorte', 'corte', 'nota'])
+        && request.resource.data.semanas is list && request.resource.data.semanas.size() <= 12
+        && request.resource.data.numero is string && request.resource.data.numero.size() <= 30
+        && request.resource.data.importe is number
+        && (!('nota' in request.resource.data) || request.resource.data.nota.size() <= 300));
+      // El repartidor puede anular su factura mientras siga "recibida"
+      allow update: if (puedeEditar() && request.resource.data.uid == resource.data.uid)
+        || (conSesion() && resource.data.uid == request.auth.uid && resource.data.estado == 'recibida'
+            && request.resource.data.estado == 'anulada'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'anulada']));
+      allow delete: if false;
+    }
+    match /facturasPdf/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow create: if (puedeEditar() || (conSesion() && request.resource.data.uid == request.auth.uid))
+        && request.resource.data.datos is string && request.resource.data.datos.size() < 1000000;
+      allow update, delete: if false;
+    }
+
+    // Imágenes subidas desde el panel (la sincronización las pasa a GitHub)
+    match /imagenes/{id} {
+      allow read, delete: if esAdmin();
+      allow create, update: if esAdmin() && request.resource.data.datos is string
+        && request.resource.data.datos.size() < 950000;
+    }
+
+    // Conversaciones con el asistente: cada repartidor registra las suyas
+    match /chats/{id} {
+      allow create: if conSesion() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'pregunta', 'respuesta', 'tokens', 'fecha'])
+        && request.resource.data.pregunta is string && request.resource.data.pregunta.size() <= 600
+        && request.resource.data.respuesta is string && request.resource.data.respuesta.size() <= 3000;
+      allow read: if esAdmin();
+    }
+
+    // Celular donde cada repartidor recibe notificaciones (un dispositivo por persona)
+    match /notificaciones/{uid} {
+      allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
+      allow create, update: if conSesion() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['tokens', 'plataforma', 'actualizado'])
+        && request.resource.data.tokens is list && request.resource.data.tokens.size() <= 3;
+      allow delete: if conSesion() && request.auth.uid == uid;
+    }
+
+    // Notificaciones que manda el administrador (el robot las envía)
+    match /colaNotif/{id} {
+      allow read, create: if esAdmin();
+    }
+
+    // NIT y razón social de cada repartidor: los registra él UNA sola vez desde el portal;
+    // después solo el equipo de CONTROL los puede cambiar. Con ellos se revisan sus facturas.
+    match /perfiles/{uid} {
+      allow read: if conSesion() && (request.auth.uid == uid || esAdmin());
+      allow create: if puedeEditar() || (conSesion() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nit', 'razonSocial', 'creado'])
+        && request.resource.data.nit is string && request.resource.data.nit.matches('^[0-9]{5,15}$')
+        && request.resource.data.razonSocial is string && request.resource.data.razonSocial.size() >= 3 && request.resource.data.razonSocial.size() <= 160);
+      allow update, delete: if puedeEditar();
+    }
+
+    // Documentación del repartidor (NIT, matrícula, ROE, declaraciones mensuales, estados financieros).
+    // documentos/{uid}_{tipo}[_{periodo}]: datos y estado · documentosArchivo/{mismo id}: el archivo.
+    // El repartidor sube o reemplaza los suyos mientras no estén aprobados; el equipo los revisa en CONTROL.
+    match /documentos/{doc} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow create, update: if puedeEditar() || (conSesion() && doc.matches(request.auth.uid + '_.+')
+        && request.resource.data.uid == request.auth.uid && request.resource.data.estado == 'recibido'
+        && (resource == null || resource.data.estado != 'aprobado')
+        && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'tipo', 'periodo', 'nombreArchivo', 'tamano', 'mime', 'estado', 'subido', 'vigencia'])
+        && request.resource.data.tipo in ['nit', 'matricula', 'roe', 'rcv', 'f200', 'f400', 'eeff']);
+      allow delete: if false;
+    }
+    match /documentosArchivo/{doc} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow create, update: if conSesion() && doc.matches(request.auth.uid + '_.+') && request.resource.data.uid == request.auth.uid
+        && request.resource.data.datos is string && request.resource.data.datos.size() < 1000000
+        && (!exists(/databases/$(database)/documents/documentos/$(doc)) || get(/databases/$(database)/documents/documentos/$(doc)).data.estado != 'aprobado');
+      allow delete: if false;
+    }
+
+    // Semanas de pago (una por repartidor y semana). Las escribe CONTROL al importar las
+    // planillas de Yango/MTG, al generar la planilla y al confirmar el pago.
+    // Ver INTEGRACION-NUCLEO-YANGO.md (carpeta Proyectos).
+    match /semanas/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow write: if puedeEditar();
+    }
+
+    // Motivo por el que CONTAX no pudo emitir la factura de una semana (lo escribe el Panel). El repartidor ve solo los suyos.
+    match /emisionContax/{id} {
+      allow read: if esAdmin() || (conSesion() && resource.data.uid == request.auth.uid);
+      allow write: if puedeEditar();
+    }
+
+    // Historial de pagos de CONTROL (reemplaza la hoja HistPagosMTG): un documento por fecha de pago.
+    // Solo el equipo; el repartidor ve sus pagos en «semanas».
+    match /historialPagos/{id} {
+      allow read: if esEquipo();
+      allow write: if puedeEditar();
+    }
+
+    // Historial de pagos de cada repartidor (migrado de HistPagosMTG por CONTROL). Lo lee solo él.
+    match /historialRider/{uid} {
+      allow read: if esAdmin() || esRepartidor(uid);
+      allow write: if puedeEditar();
+    }
+
+    // Lo último que hizo la sincronización (para el tablero de CONTROL)
+    match /privado/estado {
+      allow read: if esEquipo();
+    }
+
+    // Lo que venía de las hojas viejas (ChatLog, AvisosLeidos)
+    match /archivo/{doc} {
+      allow read: if esAdmin();
+    }
+
+    // Todo lo demás (por ejemplo privado/notif-*) queda cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

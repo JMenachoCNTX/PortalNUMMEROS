@@ -50,8 +50,9 @@ service cloud.firestore {
       allow create: if puedeEditar() || (conSesion() && request.resource.data.uid == request.auth.uid
         && request.resource.data.estado == 'recibida'
         && request.resource.data.keys().hasOnly(['uid', 'id', 'nombre', 'semanas', 'numero', 'importe', 'fechaEmision', 'nitEmisor',
-             'razonEmisor', 'autorizacion', 'leidaIA',
+             'razonEmisor', 'autorizacion', 'leidaIA', 'horaEmision',
              'nombreArchivo', 'tamano', 'paginas', 'estado', 'subido', 'fueraDeCorte', 'corte', 'nota'])
+        && (!('horaEmision' in request.resource.data) || (request.resource.data.horaEmision is string && request.resource.data.horaEmision.size() <= 8))
         && request.resource.data.semanas is list && request.resource.data.semanas.size() <= 12
         && request.resource.data.numero is string && request.resource.data.numero.size() <= 30
         && request.resource.data.importe is number
