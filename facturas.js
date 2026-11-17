@@ -200,6 +200,13 @@
       (otro ? 'Parece ser la factura del pago de la ' + otro.semana + ': adjúntala en ese pago.' :
        (libres || []).length > 1 && Math.abs(total - (Number(d.importeTotal) || 0)) <= 0.05 ? 'No se acepta una factura por varias semanas: emite una factura por cada pago.' :
        'Emite una factura por el importe exacto de este pago.'));
+    // Sin descuentos (v3.34): Impuestos (RCV) registra el «Importe Total Compra», que es el monto ANTES del descuento.
+    // Una factura con descuento nunca cuadra con el pago en CONTROL. Si el lector no trae subtotal (0), no se exige.
+    var desc = (Number(d.descuento) || 0) + (Number(d.giftCard) || 0), sub = Number(d.subtotal) || 0;
+    var subMal = sub > 0 && Math.abs(sub - (Number(pago.importe) || 0)) > 0.05;
+    punto(desc <= 0.005 && !subMal, 'Sin descuentos',
+      (desc > 0.005 ? 'Tu factura tiene un descuento' + ' de ' + bs(desc) : 'El subtotal de tu factura es ' + bs(sub) + ', no ' + bs(pago.importe)) +
+      '. Anúlala y emítela de nuevo por ' + bs(pago.importe) + ' sin descuento.');
     return { puntos: ch, semanas: igual ? [pago] : [], todoBien: ch.every(function (x) { return x.ok; }) };
   }
   function pintarLeida(d, rv) {
@@ -208,6 +215,7 @@
       '<div class="h2">Datos de tu factura <small>leídos del archivo</small></div>' +
       dato('N.º de factura', d.numeroFactura) + dato('Fecha de emisión', fechaCorta(d.fechaEmision)) + dato('NIT del emisor', d.nitEmisor) + dato('Emisor', d.razonSocialEmisor) +
       dato('A nombre de', d.razonSocialComprador + (d.nitComprador ? ' · NIT ' + d.nitComprador : '')) + dato('Importe', bs(d.importeTotal)) +
+      ((Number(d.descuento) || 0) + (Number(d.giftCard) || 0) > 0.005 ? dato('Subtotal', bs(d.subtotal)) + dato('Descuento', bs((Number(d.descuento) || 0) + (Number(d.giftCard) || 0))) : '') +
       (d.codigoAutorizacion ? dato('Código de autorización', d.codigoAutorizacion.slice(0, 22) + (d.codigoAutorizacion.length > 22 ? '…' : '')) : '') +
       '<ul class="reglas" style="margin-top:12px">' + rv.puntos.map(function (x) {
         return '<li style="color:' + (x.ok ? 'inherit' : 'var(--nm-error)') + '">' + ic(x.ok ? 'escudo' : 'alerta') + '<span>' + esc(x.t) + '</span></li>';

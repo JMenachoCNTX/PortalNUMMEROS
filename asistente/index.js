@@ -68,6 +68,9 @@ Recibes el PDF de una factura que un repartidor emitió por sus servicios, o una
 - nitComprador: NIT/CI/CEX del cliente ("NIT/CI/CEX" del comprador). Solo dígitos.
 - razonSocialComprador: "Nombre/Razón Social" del cliente.
 - importeTotal: el total a pagar o "MONTO A PAGAR" / "IMPORTE BASE CRÉDITO FISCAL" si es el único total, como número (punto decimal).
+- subtotal: el "SUBTOTAL Bs" del pie (antes de restar el descuento del pie). Si no aparece, la suma de la columna SUBTOTAL de las líneas. Número.
+- descuento: TODOS los descuentos de la factura sumados: la columna "DESCUENTO" de cada línea más el "DESCUENTO Bs" del pie (bonificaciones y rebajas también). 0 si no hay.
+- giftCard: el "MONTO GIFT CARD Bs". 0 si no hay.
 - semanas: números de semana que menciona la descripción (por ejemplo "SERVICIOS DE DELIVERY SEM 43" → ["43"]; "SEM 42 Y 43" → ["42","43"]). Vacío si no menciona ninguna.
 - anulada: true solo si el documento dice claramente ANULADA.
 - legible: false si algún dato de los de arriba (NIT, nombre, N.º, código de autorización, fecha, cliente o importe) está borroso, cortado, tapado o no se puede leer con seguridad.
@@ -78,7 +81,7 @@ const ESQUEMA_FACTURA = {
   properties: {
     esFactura: { type: 'BOOLEAN' }, nitEmisor: { type: 'STRING' }, razonSocialEmisor: { type: 'STRING' }, numeroFactura: { type: 'STRING' },
     codigoAutorizacion: { type: 'STRING' }, fechaEmision: { type: 'STRING' }, horaEmision: { type: 'STRING' }, nitComprador: { type: 'STRING' }, razonSocialComprador: { type: 'STRING' },
-    importeTotal: { type: 'NUMBER' }, semanas: { type: 'ARRAY', items: { type: 'STRING' } }, anulada: { type: 'BOOLEAN' },
+    importeTotal: { type: 'NUMBER' }, subtotal: { type: 'NUMBER' }, descuento: { type: 'NUMBER' }, giftCard: { type: 'NUMBER' }, semanas: { type: 'ARRAY', items: { type: 'STRING' } }, anulada: { type: 'BOOLEAN' },
     legible: { type: 'BOOLEAN' }, ilegibles: { type: 'ARRAY', items: { type: 'STRING' } }
   },
   required: ['esFactura', 'nitEmisor', 'razonSocialEmisor', 'numeroFactura', 'fechaEmision', 'nitComprador', 'razonSocialComprador', 'importeTotal', 'legible']
@@ -121,12 +124,14 @@ async function leerFactura(pedido, env, cab) {
     const t = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts.map(p => p.text || '').join('');
     let d; try { d = JSON.parse(t || '{}'); } catch (e) { ultimo = 'json'; errores.push(m + ' → respuesta no es JSON'); continue; }
     const dig = v => String(v || '').replace(/\D/g, '');
+    const num = v => Math.max(0, Math.round((Number(v) || 0) * 100) / 100);
     return respuesta({ datos: {
       esFactura: d.esFactura !== false, nitEmisor: dig(d.nitEmisor), razonSocialEmisor: String(d.razonSocialEmisor || '').trim().slice(0, 160),
       numeroFactura: dig(d.numeroFactura), codigoAutorizacion: String(d.codigoAutorizacion || '').replace(/\s+/g, '').toUpperCase().slice(0, 80),
       fechaEmision: /^\d{4}-\d{2}-\d{2}$/.test(d.fechaEmision || '') ? d.fechaEmision : '',
       horaEmision: /^([01]\d|2[0-3]):[0-5]\d$/.test(d.horaEmision || '') ? d.horaEmision : '', nitComprador: dig(d.nitComprador),
       razonSocialComprador: String(d.razonSocialComprador || '').trim().slice(0, 160), importeTotal: Math.round((Number(d.importeTotal) || 0) * 100) / 100,
+      subtotal: num(d.subtotal), descuento: num(d.descuento), giftCard: num(d.giftCard),
       semanas: (Array.isArray(d.semanas) ? d.semanas : []).map(dig).filter(Boolean).slice(0, 12), anulada: d.anulada === true,
       legible: d.legible !== false, ilegibles: (Array.isArray(d.ilegibles) ? d.ilegibles : []).map(x => String(x).slice(0, 40)).slice(0, 10)
     }, modelo: m, ms: Date.now() - inicio }, 200, cab);
