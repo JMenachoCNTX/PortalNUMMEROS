@@ -123,10 +123,10 @@
       '</div>';
   };
 
-  /* Semanas que todavía se pueden facturar («Enviado a pagar» ya está en la planilla del banco) */
+  /* Semanas que todavía se pueden facturar. «Enviado a pagar» también: si se habilitó por excepción, todavía falta su factura */
   function semanasLibres() {
     var ya = semanasConFactura(), d = S.datos || {};
-    var pend = (d.pendientes || []).filter(function (p) { return !ya[p.semana] && !p.enPlanilla; });
+    var pend = (d.pendientes || []).filter(function (p) { return !ya[p.semana]; });
     // También los pagos ya pagados cuya factura está pendiente de emisión
     var pagadas = (d.porEmitir || []).filter(function (p) { return !ya[p.semana]; }).map(function (p) { return Object.assign({}, p, { pagada: true }); });
     return pend.concat(pagadas);
@@ -134,7 +134,7 @@
   /* Dos estados distintos: el del pago y el de la factura */
   function estadosPago(p) {
     var e = emision[p.semana];
-    return '<div class="fac-estados"><span class="muted">Pago:</span> ' + (p.pagada ? '<span class="chip ok">Pagado' + (p.fechaPago ? ' el ' + esc(p.fechaPago) : '') + '</span>' : '<span class="chip pend">Pendiente</span>') +
+    return '<div class="fac-estados"><span class="muted">Pago:</span> ' + (p.pagada ? '<span class="chip ok">Pagado' + (p.fechaPago ? ' el ' + esc(p.fechaPago) : '') + '</span>' : p.enPlanilla ? '<span class="chip pend">Enviado a pagar</span>' : '<span class="chip pend">Pendiente</span>') +
       ' <span class="muted">Factura:</span> ' + (e ? '<span class="chip mal">CONTAX no pudo emitirla</span>' : '<span class="chip pend">Pendiente de emisión</span>') + '</div>' +
       (e ? '<div class="fac-motivo"><b>' + esc(e.motivo) + '</b>' + (AYUDA_MOTIVO[e.motivo] ? ' · ' + esc(AYUDA_MOTIVO[e.motivo]) : '') + (e.comentario ? '<br>' + esc(e.comentario) : '') + '</div>' : '');
   }

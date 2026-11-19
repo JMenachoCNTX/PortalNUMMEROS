@@ -258,10 +258,12 @@
       var n = Number((x.replace(/G\s*\d{2,4}\s*$/i, '').match(/(\d{1,2})/) || [0, 0])[1]);
       return (a || 0) * 100 + n;
     };
-    var ya = {}; l.forEach(function (s) { if (s.estado === 'pagado') ya[(s.orden || ordenDe(s.semana)) + '|' + Math.round((Number(s.importe) || 0) * 100)] = 1; });
+    var ya = {}; l.forEach(function (s) { if (s.estado === 'pagado') ya[(s.orden || ordenDe(s.semana)) + '|' + Math.round((Number(s.importe) || 0) * 100)] = s; });
     filas.forEach(function (f) {
       var o = ordenDe(f[0]), k = o + '|' + Math.round((Number(f[2]) || 0) * 100);
-      if (ya[k]) return; ya[k] = 1;
+      // Ya está en «semanas»: no se repite, pero se le pasa el N.º de factura del historial (las semanas no lo guardan)
+      if (ya[k]) { if (typeof ya[k] === 'object' && !ya[k].factura && f[4]) ya[k].factura = f[4]; return; }
+      ya[k] = 1;
       l.push({ semana: f[0], rango: f[1], importe: Number(f[2]) || 0, estado: 'pagado', fechaPago: f[3], orden: o, factura: f[4] });
     });
     l.sort(function (a, b) { return (b.orden || 0) - (a.orden || 0); });
@@ -275,8 +277,9 @@
       return Object.assign({}, s, { enPlanilla: s.tipo === 'en_planilla', estado: s.tipo === 'en_planilla' ? 'Enviado a pagar' : s.fuera ? 'No entró a la planilla' : s.rebote ? 'Devuelto por el banco' : 'Pendiente' });
     });
     d.historial = d.semanas.filter(function (s) { return s.tipo === 'pagado'; });
-    // Pagadas pero con la factura pendiente de emisión (en el historial dicen «Pago Retenido»): el repartidor la emite y la sube después
-    d.porEmitir = d.historial.filter(function (s) { return /RETENID/i.test(s.factura); });
+    // Pagadas sin factura (igual que CONTROL): N.º vacío, «Pago Retenido» o «Falta factura». Incluye las habilitadas por excepción
+    // que se pagaron sin factura. «Mis facturas» quita las que ya tienen una factura subida, emitida por CONTAX o verificada.
+    d.porEmitir = d.historial.filter(function (s) { var t = String(s.factura || '').trim(); return s.importe > 0 && (!t || /RETEN|FALTA/i.test(t)); });
     d.ultimaSemana = d.semanas[0] || null;
     d.habilitado = !(d.ultimaSemana && d.ultimaSemana.tipo === 'no_habilitado');
     d.resumen = { pendientes: { cantidad: d.pendientes.length, total: suma(d.pendientes) }, pagados: { cantidad: d.historial.length, total: suma(d.historial) } };
