@@ -238,10 +238,10 @@
       return fetch(C.ia.url.replace(/\/+$/, '') + '/factura', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok },
         body: JSON.stringify({ pdf: dataUrl.slice(dataUrl.indexOf(',') + 1), tipo: (dataUrl.match(/^data:([^;,]+)/) || [0, 'application/pdf'])[1] })
-      });
+      }).catch(function () { throw new Error('No pudimos revisar tu factura. Revisa tu conexión a internet e intenta de nuevo.'); });
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
-        if (!r.ok || j.error || !j.datos) throw new Error(j.error || 'No pudimos leer tu factura. Intenta de nuevo en unos minutos.');
+        if (!r.ok || j.error || !j.datos) throw new Error(j.error || 'No pudimos revisar tu factura. Intenta de nuevo en unos minutos.');
         return j;
       });
     });
@@ -304,14 +304,14 @@
     entrada.addEventListener('change', function () {
       var archivo = entrada.files[0], i = actual, pago = libres[i], caja = fm.querySelector('#facLeida' + i);
       if (!archivo || !pago || !caja) return;
-      caja.innerHTML = '<div class="aviso info">' + ic('reloj') + '<div><b>Leyendo tu factura de la ' + esc(pago.semana) + '…</b>Tarda unos segundos.</div></div>';
+      caja.innerHTML = '<div class="aviso info">' + ic('reloj') + '<div><b>Revisando tu factura de la ' + esc(pago.semana) + '…</b>Tarda unos segundos.</div></div>';
       var datosPdf = null;
       leerPDF(archivo).then(function (d) { datosPdf = d; return leerConIA(d, pago); }).then(function (r) {
         var rv = revisar(r.datos, pago, libres);
         caja.innerHTML = pintarLeida(r.datos, rv);
         var env = caja.querySelector('[data-enviar]');
         if (env) env.addEventListener('click', function () { enviar({ d: r.datos, rv: rv, modelo: r.modelo || '', pdf: datosPdf, archivo: archivo, pago: pago }, env, caja.querySelector('[data-err]')); });
-      }).catch(function (ex) { console.error(ex); caja.innerHTML = '<div class="nm-login-err">' + esc((ex && ex.message) || 'No pudimos leer tu factura.') + '</div>'; });
+      }).catch(function (ex) { console.error(ex); caja.innerHTML = '<div class="nm-login-err">' + esc((ex && ex.message) || 'No pudimos revisar tu factura.') + '</div>'; });
     });
   };
   function enviar(leida, btn, err) {

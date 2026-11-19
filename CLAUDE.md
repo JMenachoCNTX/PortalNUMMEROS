@@ -32,7 +32,7 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **Reglas:** el robot de sincronización intenta publicar `firestore.rules` al cambiar; si no, se pegan a mano en la consola de Firebase (`portal-nummeros`).
 - **Apps Script viejo:** se pega a mano `apps-script-migracion/` y se crea una nueva versión de la implementación.
 - Aviso de nueva versión: `version-aviso.js` (copia del de `NUMMEROS_CRM`) muestra «Hay una nueva versión · Actualizar ahora» al publicar; no hay que tocar nada.
-- Versiones: `version` en `config.js` (hoy 3.34) y "(v3.x)" en el mensaje del commit.
+- Versiones: `version` en `config.js` (hoy 3.35) y "(v3.x)" en el mensaje del commit.
 
 ## Cuidados importantes
 - **El repositorio es PÚBLICO.** El `.json` de la cuenta de servicio y las claves van **solo** en GitHub → Settings → Secrets, nunca en archivos.
@@ -59,3 +59,4 @@ CONTAX (NUMMEROS by CONTAX), para los repartidores que cobra **MILTHAGOR S.R.L.*
 - **3.32 (urgente):** la 3.31 rompió la carga de facturas: `firestore.rules` (`facturas` create, `hasOnly`) no permite `horaEmision` y rechazaba todas. Se dejó de enviar `horaEmision` hasta publicar las reglas con ese campo; CONTROL acepta por la fecha si falta la hora. **Antes de agregar un campo a un documento que crea el repartidor, revisar la lista `hasOnly` de las reglas.**
 - **3.33:** reglas publicadas el 12/11/2026 con `horaEmision` (string ≤ 8) en `facturas` (copia previa en `respaldos/`); el portal vuelve a guardar la hora de emisión.
 - **3.34 (sin descuentos):** el lector (`/factura`) también devuelve `subtotal`, `descuento` (líneas + pie) y `giftCard`. «Mis facturas» rechaza la factura si tiene descuento o gift card, o si el subtotal no es igual al pago: «Tu factura tiene un descuento… Anúlala y emítela de nuevo por Bs X sin descuento». Motivo: el RCV de Impuestos registra el «Importe Total Compra» (antes del descuento) y CONTROL nunca podría verificarla. Estos campos **no** se guardan en `facturas` (las reglas no cambiaron). Si el lector no trae el subtotal (0), no se exige.
+- **3.35:** al subir la factura dice «Revisando tu factura…» (antes «Leyendo»); si se corta internet, el mensaje sale en español. El repartidor nunca ve «IA», «Gemini» ni que el servicio esté saturado: cualquier falla del lector dice «No pudimos revisar tu factura… Intenta de nuevo en unos minutos».
